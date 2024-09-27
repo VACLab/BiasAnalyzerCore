@@ -1,0 +1,10 @@
+# example configuration for HealthDataBias
+
+root_omop_cdm_database:
+  username: test_username
+  password: test_password
+  hostname: test_db_hostname
+  database: test_db_name
+  port: 5432
+
+

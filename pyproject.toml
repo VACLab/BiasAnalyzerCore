@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "HealthDataBias"
+version = "0.1.0"
+description = "A python package for health data bias quantification to support visual analytics techniques for tracking and communicating bias in cohort selection"
+authors = ["Hong Yi <hongyi@renci.org>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.8.10"
+duckdb = "^1.1.1"
+pandas = "2.0.3"
+scipy = "1.10.1"
+numpy = "1.24.4"
+duckdb-engine = "^0.13.2"
+sqlalchemy = "^2.0.35"
+pyyaml = "^6.0.2"
+pydantic = "^2.9.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.3.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
