@@ -1,19 +1,20 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr
 from datetime import date
-from healthdatabias.config import load_config
 
 
-class HealthDataBias:
-    def __init__(self):
-        self.config = {}
+class RootOMOPCDM(BaseModel):
+    username: StrictStr
+    password: StrictStr
+    hostname: StrictStr
+    database: StrictStr
+    port: int
 
-    def set_config(self, config_file_path):
-        if not self.config:
-            self.config = load_config(config_file_path)
+
+class Configuration(BaseModel):
+    root_omop_cdm_database: RootOMOPCDM
 
 
 class CohortDefinition(BaseModel):
-    id: int
     name: str
     description: str
     created_date: date
