@@ -1,9 +1,9 @@
 import duckdb
-from models import Cohort, CohortDefinition
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine
+from healthdatabias.models import Cohort, CohortDefinition
 
 
 class BiasDatabase:

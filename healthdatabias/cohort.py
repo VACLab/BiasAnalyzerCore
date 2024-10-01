@@ -1,8 +1,7 @@
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
-from typing import List, Dict
-from models import CohortDefinition, Cohort
-from database import OMOPCDMDatabase, BiasDatabase
+from healthdatabias.models import CohortDefinition, Cohort
+from healthdatabias.database import OMOPCDMDatabase, BiasDatabase
 
 
 class CohortAction:

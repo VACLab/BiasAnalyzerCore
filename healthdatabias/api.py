@@ -1,7 +1,7 @@
-from database import OMOPCDMDatabase, BiasDatabase
-from cohort import CohortAction
-from config import load_config
 from pydantic import ValidationError
+from healthdatabias.database import OMOPCDMDatabase, BiasDatabase
+from healthdatabias.cohort import CohortAction
+from healthdatabias.config import load_config
 
 
 class BIAS:
