@@ -6,7 +6,7 @@ authors = ["Hong Yi <hongyi@renci.org>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8.10"
+python = "3.8.10"
 duckdb = "^1.1.1"
 pandas = "2.0.3"
 scipy = "1.10.1"
@@ -15,6 +15,7 @@ duckdb-engine = "^0.13.2"
 sqlalchemy = "^2.0.35"
 pyyaml = "^6.0.2"
 pydantic = "^2.9.2"
+psycopg2 = "2.9.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.3"

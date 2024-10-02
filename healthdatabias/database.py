@@ -29,7 +29,8 @@ class BiasDatabase:
                       description VARCHAR, 
                       created_date DATE, 
                       creation_info VARCHAR, 
-                      created_by VARCHAR
+                      created_by VARCHAR,
+                      PRIMARY KEY (id)
                       )
                 ''')
         print("Cohort Definition table created.")
