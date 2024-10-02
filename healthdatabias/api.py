@@ -26,6 +26,7 @@ class BIAS:
         else:
             try:
                 self.config = load_config(config_file_path)
+                print(f'configuration specified in {config_file_path} loaded successfully')
             except FileNotFoundError:
                 print('specified configuration file does not exist. '
                       'Call set_config(config_file_path) next to specify a valid '
