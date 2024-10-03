@@ -59,9 +59,10 @@ class BiasDatabase:
             cohort_definition.creation_info,
             cohort_definition.created_by
         ))
-        print("Inserted cohort definition.")
+        print("Cohort definition inserted successfully.")
         self.conn.execute("SELECT id from cohort_definition ORDER BY id DESC LIMIT 1")
-        return self.conn.fetchone()
+        created_cohort_id = self.conn.fetchone()[0]
+        return created_cohort_id
 
     # Method to insert cohort data
     def create_cohort(self, cohort: Cohort):
@@ -74,22 +75,25 @@ class BiasDatabase:
             cohort.cohort_start_date,
             cohort.cohort_end_date
         ))
-        print("Inserted cohort.")
 
     def get_cohort_definitions(self):
         results = self.conn.execute('''
         SELECT id, name, description, created_date, creation_info, created_by FROM cohort_definition
         ''')
-        return results.fetchall()
+        headers = [desc[0] for desc in results.description]
+        rows = results.fetchall()
+        return [dict(zip(headers, row)) for row in rows]
 
-    def get_cohort(self, cohort_definition_id):
+    def get_cohort(self, cohort_definition_id, count):
         results = self.conn.execute(f'''
         SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM cohort 
-        WHERE cohort_definition_id = {cohort_definition_id}
+        WHERE cohort_definition_id = {cohort_definition_id} limit {count}
         ''')
-        return results.fetchall()
+        headers = [desc[0] for desc in results.description]
+        rows = results.fetchall()
+        return [dict(zip(headers, row)) for row in rows]
 
-    def get_cohort_stats(self, cohort_definition_id: int):
+    def get_cohort_basic_stats(self, cohort_definition_id: int):
         """
         Get aggregation statistics for a cohort from the cohort table.
         """
@@ -118,7 +122,7 @@ class BiasDatabase:
             return stats
 
         except Exception as e:
-            print(f"Error getting cohort statistics: {e}")
+            print(f"Error getting cohort basic statistics: {e}")
             return None
 
     def close(self):

@@ -73,17 +73,22 @@ class BIAS:
         else:
             print('failed to create a valid cohort action object')
 
-    def get_cohort(self, cohort_id):
+    def get_cohort(self, cohort_id, count=10):
+        """
+        :param cohort_id: cohort definition ID
+        :param count: the number of records in the cohort to return
+        :return: the specified number of records in the cohort
+        """
         c_action = self._set_cohort_action()
         if c_action:
-            return c_action.get_cohort(cohort_id)
+            return c_action.get_cohort(cohort_id, count)
         else:
             print('failed to create a valid cohort action object')
 
-    def get_cohort_stats(self, cohort_id):
+    def get_cohort_basic_stats(self, cohort_id):
         c_action = self._set_cohort_action()
         if c_action:
-            return c_action.get_cohort_stats(cohort_id)
+            return c_action.get_cohort_basic_stats(cohort_id)
         else:
             print('failed to create a valid cohort action object')
 

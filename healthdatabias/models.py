@@ -1,4 +1,5 @@
 from pydantic import BaseModel, StrictStr, ConfigDict
+from typing import Optional
 from datetime import date
 
 
@@ -30,4 +31,4 @@ class Cohort(BaseModel):
     cohort_definition_id: int
     subject_id: int
     cohort_start_date: date
-    cohort_end_date: date
+    cohort_end_date: Optional[date]
