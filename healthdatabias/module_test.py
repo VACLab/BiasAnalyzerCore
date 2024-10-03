@@ -20,6 +20,10 @@ if __name__ == '__main__':
         print(f'The first five records in the cohort {cohort_def[0]["id"]}: {cohort}')
         cohort_stats = bias.get_cohort_basic_stats(cohort_def[0]['id'])
         print(f'the cohort {cohort_def[0]["id"]} stats: {cohort_stats}')
+        cohort_age_dists = bias.get_cohort_age_distributions(cohort_def[0]['id'])
+        print(f'the cohort {cohort_def[0]["id"]} age distributions: {cohort_age_dists}')
+        cohort_gender_dists = bias.get_cohort_gender_distributions(cohort_def[0]['id'])
+        print(f'the cohort {cohort_def[0]["id"]} gender distributions: {cohort_gender_dists}')
     finally:
         bias.cleanup()
         print('done')

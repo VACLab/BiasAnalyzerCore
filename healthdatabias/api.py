@@ -46,6 +46,10 @@ class BIAS:
             db = self.config['root_omop_cdm_database']['database']
             db_url = f"postgresql://{user}:{password}@{host}:{port}/{db}"
             self.omop_cdm_db = OMOPCDMDatabase(db_url)
+            # load postgres extension in duckdb bias_db so that cohorts in duckdb can be joined
+            # with OMOP CDM tables in omop_cdm_db
+            self.bias_db.load_postgres_extension()
+            self.bias_db.omop_cdm_db_url = db_url
         else:
             print('no valid configuration set to set root OMOP CDM data. ')
 
@@ -89,6 +93,20 @@ class BIAS:
         c_action = self._set_cohort_action()
         if c_action:
             return c_action.get_cohort_basic_stats(cohort_id)
+        else:
+            print('failed to create a valid cohort action object')
+
+    def get_cohort_age_distributions(self, cohort_id):
+        c_action = self._set_cohort_action()
+        if c_action:
+            return c_action.get_cohort_age_distributions(cohort_id)
+        else:
+            print('failed to create a valid cohort action object')
+
+    def get_cohort_gender_distributions(self, cohort_id):
+        c_action = self._set_cohort_action()
+        if c_action:
+            return c_action.get_cohort_gender_distributions(cohort_id)
         else:
             print('failed to create a valid cohort action object')
 

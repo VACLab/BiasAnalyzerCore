@@ -17,6 +17,7 @@ class BiasDatabase:
     def _initialize(self):
         # by default, duckdb uses in memory database
         self.conn = duckdb.connect(':memory:')
+        self.omop_cdm_db_url = None
         self._create_cohort_definition_table()
         self._create_cohort_table()
 
@@ -47,6 +48,10 @@ class BiasDatabase:
             )
         ''')
         print("Cohort table created.")
+
+    def load_postgres_extension(self):
+        self.conn.execute("INSTALL postgres_scanner;")
+        self.conn.execute("LOAD postgres_scanner;")
 
     def create_cohort_definition(self, cohort_definition: CohortDefinition):
         self.conn.execute('''
@@ -100,14 +105,29 @@ class BiasDatabase:
         try:
             # Query the cohort data to get basic statistics
             stats_query = f'''
+                WITH cohort_Duration AS (
+                    SELECT
+                        subject_id,
+                        cohort_start_date,
+                        cohort_end_date,
+                        cohort_end_date - cohort_start_date AS duration_days
+                    FROM
+                        cohort
+                    WHERE cohort_definition_id = {cohort_definition_id}    
+                )
                 SELECT
-                    COUNT(subject_id) AS subject_count,
+                    COUNT(*) AS total_count,
                     MIN(cohort_start_date) AS earliest_start_date,
                     MAX(cohort_start_date) AS latest_start_date,
                     MIN(cohort_end_date) AS earliest_end_date,
-                    MAX(cohort_end_date) AS latest_end_date
-                FROM cohort
-                WHERE cohort_definition_id = {cohort_definition_id}
+                    MAX(cohort_end_date) AS latest_end_date,
+                    MIN(duration_days) AS min_duration_days,
+                    MAX(duration_days) AS max_duration_days,
+                    AVG(duration_days) AS avg_duration_days,
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_days) AS median_duration,
+                    STDDEV(duration_days) AS stddev_duration
+                FROM cohort_Duration
+                
             '''
             result = self.conn.execute(stats_query).fetchall()
 
@@ -117,12 +137,96 @@ class BiasDatabase:
                 "earliest_start_date": result[0][1],
                 "latest_start_date": result[0][2],
                 "earliest_end_date": result[0][3],
-                "latest_end_date": result[0][4]
+                "latest_end_date": result[0][4],
+                "min_duration_days": result[0][5],
+                "max_duration_days": result[0][6],
+                "avg_duration_days": round(result[0][7], 2),
+                "median_duration_days": int(result[0][8]),
+                "stddev_duration_days": round(result[0][9], 2)
             }
             return stats
 
         except Exception as e:
-            print(f"Error getting cohort basic statistics: {e}")
+            print(f"Error computing cohort basic statistics: {e}")
+            return None
+
+    def get_cohort_age_distributions(self, cohort_definition_id: int):
+        """
+        Get age distribution statistics for a cohort from the cohort table.
+        """
+        try:
+            if self.omop_cdm_db_url is not None:
+                # need to create person table from OMOP CDM postgreSQL database
+                self.conn.execute(f"""
+                    CREATE TABLE IF NOT EXISTS person AS 
+                    SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
+                """)
+            query = f'''
+                WITH Age_Cohort AS (
+                    SELECT p.person_id, EXTRACT(YEAR FROM c.cohort_start_date) - p.year_of_birth AS age 
+                    FROM cohort c JOIN person p ON c.subject_id = p.person_id
+                    WHERE c.cohort_definition_id = {cohort_definition_id}
+                    )
+                -- Calculate age distribution statistics    
+                SELECT
+                    COUNT(*) AS total_count,
+                    MIN(age) AS min_age,
+                    MAX(age) AS max_age,
+                    AVG(age) AS avg_age,
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY age) AS median_age,
+                    STDDEV(age) as stddev_age
+                FROM Age_Cohort                
+            '''
+            result = self.conn.execute(query).fetchall()
+
+            # Convert result into a dictionary for easy access
+            stats = {
+                "total_count": result[0][0],
+                "min_age": result[0][1],
+                "max_age": result[0][2],
+                "average_age": round(result[0][3], 2),
+                "median_age": int(result[0][4]),
+                "stddev_age": round(result[0][5], 2)
+            }
+            return stats
+
+        except Exception as e:
+            print(f"Error computing cohort age distributions: {e}")
+            return None
+
+    def get_cohort_gender_distributions(self, cohort_definition_id: int):
+        """
+        Get gender distribution statistics for a cohort from the cohort table.
+        """
+        try:
+            if self.omop_cdm_db_url is not None:
+                # need to create person table from OMOP CDM postgreSQL database
+                self.conn.execute(f"""
+                    CREATE TABLE IF NOT EXISTS person AS 
+                    SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
+                """)
+
+            query = f'''
+                SELECT
+                    p.gender_concept_id, 
+                    COUNT(*) AS gender_count,
+                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+                FROM cohort c JOIN person p ON c.subject_id = p.person_id 
+                WHERE c.cohort_definition_id = {cohort_definition_id}
+                GROUP BY p.gender_concept_id
+            '''
+            result = self.conn.execute(query).fetchall()
+
+            # Convert result into a dictionary for easy access
+            stats = {
+                "gender": 'male' if result[0][0] == 8507 else 'female' if result[0][0] == 8532 else 'other',
+                "count": result[0][1],
+                "percentage": round(result[0][2], 2)
+            }
+            return stats
+
+        except Exception as e:
+            print(f"Error computing cohort gender distributions: {e}")
             return None
 
     def close(self):

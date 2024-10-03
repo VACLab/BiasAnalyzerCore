@@ -64,6 +64,18 @@ class CohortAction:
         """
         return self.bias_db.get_cohort_basic_stats(cohort_id)
 
+    def get_cohort_age_distributions(self, cohort_id: int):
+        """
+        Get age distribution statistics for a specific cohort in BiasDatabase.
+        """
+        return self.bias_db.get_cohort_age_distributions(cohort_id)
+
+    def get_cohort_gender_distributions(self, cohort_id: int):
+        """
+        Get gender distribution statistics for a specific cohort in BiasDatabase.
+        """
+        return self.bias_db.get_cohort_gender_distributions(cohort_id)
+
     def compare_cohorts(self, cohort_id_1: int, cohort_id_2: int):
         """
         Compare the distributions of two cohorts in BiasDatabase.
