@@ -217,12 +217,14 @@ class BiasDatabase:
             '''
             result = self.conn.execute(query).fetchall()
 
-            # Convert result into a dictionary for easy access
-            stats = {
-                "gender": 'male' if result[0][0] == 8507 else 'female' if result[0][0] == 8532 else 'other',
-                "count": result[0][1],
-                "percentage": round(result[0][2], 2) if result[0][2] is not None else None
-            }
+            stats = []
+            for row in result:
+                # Convert result into a dictionary for easy access
+                stats.append({
+                    "gender": 'male' if row[0] == 8507 else 'female' if row[0] == 8532 else 'other',
+                    "count": row[1],
+                    "percentage": round(row[2], 2) if row[2] is not None else None
+                })
             return stats
 
         except Exception as e:
