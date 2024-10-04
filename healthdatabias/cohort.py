@@ -15,12 +15,14 @@ class CohortAction:
         Create a new cohort by executing a query on OMOP CDM database
         and storing the result in BiasDatabase.
         """
+        print('start of create_cohort', flush=True)
         omop_session = self.omop_db.get_session()
+        print(f'in create_cohort, omop_session: {omop_session}', flush=True)
         try:
             query = text(query)
             # Execute read-only query from OMOP CDM database
             result = omop_session.execute(query).mappings().fetchall()
-
+            print(f'result: {result}', flush=True)
             # Create CohortDefinition
             cohort_def = CohortDefinition(
                 name=cohort_name,
@@ -30,6 +32,7 @@ class CohortAction:
                 created_by=created_by
             )
             cohort_def_id = self.bias_db.create_cohort_definition(cohort_def)
+            print(f'cohort_def_id: {cohort_def_id}', flush=True)
 
             # Store cohort_definition and cohort data into BiasDatabase
             for row in result:
@@ -39,6 +42,7 @@ class CohortAction:
                     cohort_start_date=row['cohort_start_date'],
                     cohort_end_date=row['cohort_end_date']
                 )
+                print(f'before creating cohort row {row}', flush=True)
                 self.bias_db.create_cohort(cohort)
             print(f"Cohort {cohort_name} successfully created.")
         except SQLAlchemyError as e:

@@ -140,9 +140,9 @@ class BiasDatabase:
                 "latest_end_date": result[0][4],
                 "min_duration_days": result[0][5],
                 "max_duration_days": result[0][6],
-                "avg_duration_days": round(result[0][7], 2),
-                "median_duration_days": int(result[0][8]),
-                "stddev_duration_days": round(result[0][9], 2)
+                "avg_duration_days": round(result[0][7], 2) if result[0][7] is not None else None,
+                "median_duration_days": int(result[0][8]) if result[0][8] is not None else None,
+                "stddev_duration_days": round(result[0][9], 2) if result[0][9] is not None else None
             }
             return stats
 
@@ -184,9 +184,9 @@ class BiasDatabase:
                 "total_count": result[0][0],
                 "min_age": result[0][1],
                 "max_age": result[0][2],
-                "average_age": round(result[0][3], 2),
-                "median_age": int(result[0][4]),
-                "stddev_age": round(result[0][5], 2)
+                "average_age": round(result[0][3], 2) if result[0][3] is not None else None,
+                "median_age": int(result[0][4]) if result[0][4] is not None else None,
+                "stddev_age": round(result[0][5], 2) if result[0][5] is not None else None
             }
             return stats
 
@@ -221,7 +221,7 @@ class BiasDatabase:
             stats = {
                 "gender": 'male' if result[0][0] == 8507 else 'female' if result[0][0] == 8532 else 'other',
                 "count": result[0][1],
-                "percentage": round(result[0][2], 2)
+                "percentage": round(result[0][2], 2) if result[0][2] is not None else None
             }
             return stats
 
