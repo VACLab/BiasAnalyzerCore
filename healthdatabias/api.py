@@ -36,7 +36,7 @@ class BIAS:
 
     def set_root_omop(self):
         if not self.config:
-            print('no valid configuration set to set root OMOP CDM data. '
+            print('no valid configuration to set root OMOP CDM data. '
                   'Call set_config(config_file_path) to specify configurations first.')
         elif 'root_omop_cdm_database' in self.config:
             user = self.config['root_omop_cdm_database']['username']
@@ -51,7 +51,7 @@ class BIAS:
             self.bias_db.load_postgres_extension()
             self.bias_db.omop_cdm_db_url = db_url
         else:
-            print('no valid configuration set to set root OMOP CDM data. ')
+            print('Configuration file must include configuration values for root_omop_cdm_database key.')
 
     def _set_cohort_action(self):
         if self.omop_cdm_db is None:
