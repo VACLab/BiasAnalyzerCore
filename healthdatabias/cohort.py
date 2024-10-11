@@ -5,6 +5,55 @@ from healthdatabias.models import CohortDefinition, Cohort
 from healthdatabias.database import OMOPCDMDatabase, BiasDatabase
 
 
+class CohortData:
+    def __init__(self, cohort_id: int, bias_db: BiasDatabase):
+        self.cohort_id = cohort_id
+        self.bias_db = bias_db
+        self._cohort_data = None # cache the cohort data
+        self._metadata = None
+
+    @property
+    def data(self):
+        """
+        query the database to get the cohort data using cohort_id. Return cached data if already fetched
+        :return: cohort data
+        """
+        if self._cohort_data is None:
+            self._cohort_data = self.bias_db.get_cohort(self.cohort_id)
+        return self._cohort_data
+
+    @property
+    def metadata(self):
+        if self._metadata is None:
+            self._metadata = self.bias_db.get_cohort_definitions(self.cohort_id)
+        return self._metadata
+
+    @property
+    def stats(self):
+        """
+        Get aggregation statistics for the cohort in BiasDatabase.
+        """
+        return self.bias_db.get_cohort_basic_stats(self.cohort_id)
+
+    @property
+    def age_distributions(self):
+        """
+        Get age distribution statistics for a specific cohort in BiasDatabase.
+        """
+        return self.bias_db.get_cohort_age_distributions(self.cohort_id)
+
+    @property
+    def gender_distributions(self):
+        """
+        Get gender distribution statistics for a specific cohort in BiasDatabase.
+        """
+        return self.bias_db.get_cohort_gender_distributions(self.cohort_id)
+
+    def __del__(self):
+        self._cohort_data = None
+        self._metadata = None
+
+
 class CohortAction:
     def __init__(self, omop_db: OMOPCDMDatabase, bias_db: BiasDatabase):
         self.omop_db = omop_db
@@ -40,40 +89,11 @@ class CohortAction:
                 )
                 self.bias_db.create_cohort(cohort)
             print(f"Cohort {cohort_name} successfully created.")
+            omop_session.close()
+            return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db)
         except SQLAlchemyError as e:
             print(f"Error executing query: {e}")
-        finally:
             omop_session.close()
-
-    def get_cohort_definitions(self):
-        """
-        Fetch all cohort definitions from BiasDatabase.
-        """
-        return self.bias_db.get_cohort_definitions()
-
-    def get_cohort(self, cohort_id: int, count: int):
-        """
-        Fetch cohort data for the specified count of records in a specific cohort in BiasDatabase.
-        """
-        return self.bias_db.get_cohort(cohort_id, count)
-
-    def get_cohort_basic_stats(self, cohort_id: int):
-        """
-        Get aggregation statistics for a specific cohort in BiasDatabase.
-        """
-        return self.bias_db.get_cohort_basic_stats(cohort_id)
-
-    def get_cohort_age_distributions(self, cohort_id: int):
-        """
-        Get age distribution statistics for a specific cohort in BiasDatabase.
-        """
-        return self.bias_db.get_cohort_age_distributions(cohort_id)
-
-    def get_cohort_gender_distributions(self, cohort_id: int):
-        """
-        Get gender distribution statistics for a specific cohort in BiasDatabase.
-        """
-        return self.bias_db.get_cohort_gender_distributions(cohort_id)
 
     def compare_cohorts(self, cohort_id_1: int, cohort_id_2: int):
         """

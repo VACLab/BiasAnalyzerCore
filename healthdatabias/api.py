@@ -65,50 +65,12 @@ class BIAS:
     def create_cohort(self, cohort_name, cohort_desc, query, created_by):
         c_action = self._set_cohort_action()
         if c_action:
-            c_action.create_cohort(cohort_name, cohort_desc, query, created_by)
+            created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query, created_by)
             print('cohort created successfully')
+            return created_cohort
         else:
             print('failed to create a valid cohort action object')
-
-    def get_cohort_definitions(self):
-        c_action = self._set_cohort_action()
-        if c_action:
-            return c_action.get_cohort_definitions()
-        else:
-            print('failed to create a valid cohort action object')
-
-    def get_cohort(self, cohort_id, count=10):
-        """
-        :param cohort_id: cohort definition ID
-        :param count: the number of records in the cohort to return
-        :return: the specified number of records in the cohort
-        """
-        c_action = self._set_cohort_action()
-        if c_action:
-            return c_action.get_cohort(cohort_id, count)
-        else:
-            print('failed to create a valid cohort action object')
-
-    def get_cohort_basic_stats(self, cohort_id):
-        c_action = self._set_cohort_action()
-        if c_action:
-            return c_action.get_cohort_basic_stats(cohort_id)
-        else:
-            print('failed to create a valid cohort action object')
-
-    def get_cohort_age_distributions(self, cohort_id):
-        c_action = self._set_cohort_action()
-        if c_action:
-            return c_action.get_cohort_age_distributions(cohort_id)
-        else:
-            print('failed to create a valid cohort action object')
-
-    def get_cohort_gender_distributions(self, cohort_id):
-        c_action = self._set_cohort_action()
-        if c_action:
-            return c_action.get_cohort_gender_distributions(cohort_id)
-        else:
-            print('failed to create a valid cohort action object')
+            return None
 
     def compare_cohorts(self, cohort_id1, cohort_id2):
         c_action = self._set_cohort_action()

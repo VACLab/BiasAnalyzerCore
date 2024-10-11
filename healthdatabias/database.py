@@ -81,18 +81,22 @@ class BiasDatabase:
             cohort.cohort_end_date
         ))
 
-    def get_cohort_definitions(self):
-        results = self.conn.execute('''
-        SELECT id, name, description, created_date, creation_info, created_by FROM cohort_definition
+    def get_cohort_definitions(self, cohort_definition_id):
+        results = self.conn.execute(f'''
+        SELECT id, name, description, created_date, creation_info, created_by FROM cohort_definition 
+        WHERE id = {cohort_definition_id} 
         ''')
         headers = [desc[0] for desc in results.description]
-        rows = results.fetchall()
-        return [dict(zip(headers, row)) for row in rows]
+        row = results.fetchall()
+        if len(row) == 0:
+            return {}
+        else:
+            return dict(zip(headers, row))
 
-    def get_cohort(self, cohort_definition_id, count):
+    def get_cohort(self, cohort_definition_id):
         results = self.conn.execute(f'''
         SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM cohort 
-        WHERE cohort_definition_id = {cohort_definition_id} limit {count}
+        WHERE cohort_definition_id = {cohort_definition_id}
         ''')
         headers = [desc[0] for desc in results.description]
         rows = results.fetchall()
