@@ -12,7 +12,7 @@ if __name__ == '__main__':
                                  'FROM condition_occurrence c JOIN '
                                  'person p ON c.person_id = p.person_id '
                                  'WHERE c.condition_concept_id = 37311061 '
-                                 'AND p.gender_concept_id = 8532 AND p.year_of_birth > 2010')
+                                 'AND p.gender_concept_id = 8532 AND p.year_of_birth > 2000')
         cohort_data = bias.create_cohort('COVID-19 patients', 'COVID-19 patients',
                                          baseline_cohort_query, 'system')
         if cohort_data:
@@ -22,6 +22,8 @@ if __name__ == '__main__':
             print(f'the cohort stats: {cohort_data.stats}')
             print(f'the cohort age distributions: {cohort_data.get_distributions("age")}')
             print(f'the cohort gender distributions: {cohort_data.get_distributions("gender")}')
+            print(f'the cohort race distributions: {cohort_data.get_distributions("race")}')
+            print(f'the cohort ethnicity distributions: {cohort_data.get_distributions("ethnicity")}')
     finally:
         if bias is not None:
             bias.cleanup()

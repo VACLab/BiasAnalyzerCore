@@ -36,7 +36,36 @@ class BiasDatabase:
                 FROM cohort c JOIN person p ON c.subject_id = p.person_id 
                 WHERE c.cohort_definition_id = {}
                 GROUP BY p.gender_concept_id
-            '''
+            ''',
+        "race": '''
+                SELECT
+                    CASE
+                        WHEN p.race_concept_id = 8516 THEN 'Black or African American'
+                        WHEN p.race_concept_id = 8515 THEN 'Asian'
+                        WHEN p.race_concept_id = 8657 THEN 'American Indian or Alaska Native'
+                        WHEN p.race_concept_id = 8527 THEN 'White'
+                        WHEN p.race_concept_id = 8557 THEN 'Native Hawaiian or Other Pacific Islander'
+                        ELSE 'Other'
+                    END AS race,     
+                    COUNT(*) AS race_count,
+                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS percentage
+                FROM cohort c JOIN person p ON c.subject_id = p.person_id
+                WHERE c.cohort_definition_id = {}
+                GROUP BY p.race_concept_id 
+        ''',
+        "ethnicity": '''
+                SELECT
+                    CASE
+                        WHEN p.ethnicity_concept_id = 38003563 THEN 'Hispanic or Latino'
+                        WHEN p.ethnicity_concept_id = 38003564 THEN 'Not Hispanic or Latino'
+                        ELSE 'other'
+                    END AS ethnicity,     
+                    COUNT(*) AS ethnicity_count,
+                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS percentage
+                FROM cohort c JOIN person p ON c.subject_id = p.person_id
+                WHERE c.cohort_definition_id = {}
+                GROUP BY p.ethnicity_concept_id
+        '''
     }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
@@ -203,11 +232,11 @@ class BiasDatabase:
             query = query_str.format(cohort_definition_id)
             results = self.conn.execute(query)
             headers = [desc[0] for desc in results.description]
-            row = results.fetchall()
-            if len(row) == 0:
-                return {}
+            rows = results.fetchall()
+            if len(rows) == 0:
+                return []
             else:
-                return dict(zip(headers, row[0]))
+                return [dict(zip(headers, row)) for row in rows]
 
         except Exception as e:
             print(f"Error computing cohort {variable} distributions: {e}")
