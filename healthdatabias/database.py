@@ -7,6 +7,37 @@ from healthdatabias.models import Cohort, CohortDefinition
 
 
 class BiasDatabase:
+    distribution_queries = {
+        "age": '''
+                WITH Age_Cohort AS (
+                    SELECT p.person_id, EXTRACT(YEAR FROM c.cohort_start_date) - p.year_of_birth AS age 
+                    FROM cohort c JOIN person p ON c.subject_id = p.person_id
+                    WHERE c.cohort_definition_id = {}
+                    )
+                -- Calculate age distribution statistics    
+                SELECT
+                    COUNT(*) AS total_count,
+                    MIN(age) AS min_age,
+                    MAX(age) AS max_age,
+                    ROUND(AVG(age), 2) AS avg_age,
+                    CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY age) AS INT) AS median_age,
+                    ROUND(STDDEV(age), 2) as stddev_age
+                FROM Age_Cohort                
+            ''',
+        "gender": '''
+                SELECT
+                    CASE
+                        WHEN p.gender_concept_id = 8507 THEN 'male'
+                        WHEN p.gender_concept_id = 8532 THEN 'female'
+                        ELSE 'other'
+                    END AS gender,     
+                    COUNT(*) AS gender_count,
+                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+                FROM cohort c JOIN person p ON c.subject_id = p.person_id 
+                WHERE c.cohort_definition_id = {}
+                GROUP BY p.gender_concept_id
+            '''
+    }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -81,7 +112,7 @@ class BiasDatabase:
             cohort.cohort_end_date
         ))
 
-    def get_cohort_definitions(self, cohort_definition_id):
+    def get_cohort_definition(self, cohort_definition_id):
         results = self.conn.execute(f'''
         SELECT id, name, description, created_date, creation_info, created_by FROM cohort_definition 
         WHERE id = {cohort_definition_id} 
@@ -91,7 +122,7 @@ class BiasDatabase:
         if len(row) == 0:
             return {}
         else:
-            return dict(zip(headers, row))
+            return dict(zip(headers, row[0]))
 
     def get_cohort(self, cohort_definition_id):
         results = self.conn.execute(f'''
@@ -154,7 +185,7 @@ class BiasDatabase:
             print(f"Error computing cohort basic statistics: {e}")
             return None
 
-    def get_cohort_age_distributions(self, cohort_definition_id: int):
+    def get_cohort_distributions(self, cohort_definition_id: int, variable: str):
         """
         Get age distribution statistics for a cohort from the cohort table.
         """
@@ -165,74 +196,21 @@ class BiasDatabase:
                     CREATE TABLE IF NOT EXISTS person AS 
                     SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
                 """)
-            query = f'''
-                WITH Age_Cohort AS (
-                    SELECT p.person_id, EXTRACT(YEAR FROM c.cohort_start_date) - p.year_of_birth AS age 
-                    FROM cohort c JOIN person p ON c.subject_id = p.person_id
-                    WHERE c.cohort_definition_id = {cohort_definition_id}
-                    )
-                -- Calculate age distribution statistics    
-                SELECT
-                    COUNT(*) AS total_count,
-                    MIN(age) AS min_age,
-                    MAX(age) AS max_age,
-                    AVG(age) AS avg_age,
-                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY age) AS median_age,
-                    STDDEV(age) as stddev_age
-                FROM Age_Cohort                
-            '''
-            result = self.conn.execute(query).fetchall()
-
-            # Convert result into a dictionary for easy access
-            stats = {
-                "total_count": result[0][0],
-                "min_age": result[0][1],
-                "max_age": result[0][2],
-                "average_age": round(result[0][3], 2) if result[0][3] is not None else None,
-                "median_age": int(result[0][4]) if result[0][4] is not None else None,
-                "stddev_age": round(result[0][5], 2) if result[0][5] is not None else None
-            }
-            return stats
+            query_str = self.__class__.distribution_queries.get(variable)
+            if query_str is None:
+                raise ValueError(f"Distribution for variable '{variable}' is not available. "
+                                 f"Valid variables are {self.__class__.distribution_queries.keys()}")
+            query = query_str.format(cohort_definition_id)
+            results = self.conn.execute(query)
+            headers = [desc[0] for desc in results.description]
+            row = results.fetchall()
+            if len(row) == 0:
+                return {}
+            else:
+                return dict(zip(headers, row[0]))
 
         except Exception as e:
-            print(f"Error computing cohort age distributions: {e}")
-            return None
-
-    def get_cohort_gender_distributions(self, cohort_definition_id: int):
-        """
-        Get gender distribution statistics for a cohort from the cohort table.
-        """
-        try:
-            if self.omop_cdm_db_url is not None:
-                # need to create person table from OMOP CDM postgreSQL database
-                self.conn.execute(f"""
-                    CREATE TABLE IF NOT EXISTS person AS 
-                    SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
-                """)
-
-            query = f'''
-                SELECT
-                    p.gender_concept_id, 
-                    COUNT(*) AS gender_count,
-                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
-                FROM cohort c JOIN person p ON c.subject_id = p.person_id 
-                WHERE c.cohort_definition_id = {cohort_definition_id}
-                GROUP BY p.gender_concept_id
-            '''
-            result = self.conn.execute(query).fetchall()
-
-            stats = []
-            for row in result:
-                # Convert result into a dictionary for easy access
-                stats.append({
-                    "gender": 'male' if row[0] == 8507 else 'female' if row[0] == 8532 else 'other',
-                    "count": row[1],
-                    "percentage": round(row[2], 2) if row[2] is not None else None
-                })
-            return stats
-
-        except Exception as e:
-            print(f"Error computing cohort gender distributions: {e}")
+            print(f"Error computing cohort {variable} distributions: {e}")
             return None
 
     def close(self):

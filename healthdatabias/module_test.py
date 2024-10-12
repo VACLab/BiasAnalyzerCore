@@ -2,6 +2,7 @@ from healthdatabias.api import BIAS
 
 
 if __name__ == '__main__':
+    bias = None
     try:
         bias = BIAS()
         bias.set_config('/home/hongyi/HealthDataBias/config.yaml')
@@ -19,8 +20,9 @@ if __name__ == '__main__':
             print(f'cohort_definition: {md}')
             print(f'The first five records in the cohort {cohort_data.data[:5]}')
             print(f'the cohort stats: {cohort_data.stats}')
-            print(f'the cohort age distributions: {cohort_data.age_distributions}')
-            print(f'the cohort gender distributions: {cohort_data.gender_distributions}')
+            print(f'the cohort age distributions: {cohort_data.get_distributions("age")}')
+            print(f'the cohort gender distributions: {cohort_data.get_distributions("gender")}')
     finally:
-        bias.cleanup()
+        if bias is not None:
+            bias.cleanup()
         print('done')

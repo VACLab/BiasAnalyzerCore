@@ -25,7 +25,7 @@ class CohortData:
     @property
     def metadata(self):
         if self._metadata is None:
-            self._metadata = self.bias_db.get_cohort_definitions(self.cohort_id)
+            self._metadata = self.bias_db.get_cohort_definition(self.cohort_id)
         return self._metadata
 
     @property
@@ -35,19 +35,11 @@ class CohortData:
         """
         return self.bias_db.get_cohort_basic_stats(self.cohort_id)
 
-    @property
-    def age_distributions(self):
+    def get_distributions(self, variable):
         """
-        Get age distribution statistics for a specific cohort in BiasDatabase.
+        Get distribution statistics for a variable (e.g., age or gender) in a specific cohort in BiasDatabase.
         """
-        return self.bias_db.get_cohort_age_distributions(self.cohort_id)
-
-    @property
-    def gender_distributions(self):
-        """
-        Get gender distribution statistics for a specific cohort in BiasDatabase.
-        """
-        return self.bias_db.get_cohort_gender_distributions(self.cohort_id)
+        return self.bias_db.get_cohort_distributions(self.cohort_id, variable)
 
     def __del__(self):
         self._cohort_data = None
