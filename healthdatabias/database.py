@@ -14,23 +14,26 @@ class BiasDatabase:
                     FROM cohort c JOIN person p ON c.subject_id = p.person_id
                     WHERE c.cohort_definition_id = {}
                     ),
+                -- Define age bins manually using SELECT statements and UNION ALL
+                Age_Bins AS (
+                    SELECT '0-10' AS age_bin, 0 AS min_age, 10 AS max_age
+                    UNION ALL SELECT '11-20', 11, 20
+                    UNION ALL SELECT '21-30', 21, 30
+                    UNION ALL SELECT '31-40', 31, 40
+                    UNION ALL SELECT '41-50', 41, 50
+                    UNION ALL SELECT '51-60', 51, 60
+                    UNION ALL SELECT '61-70', 61, 70
+                    UNION ALL SELECT '71-80', 71, 80
+                    UNION ALL SELECT '81-90', 81, 90
+                    UNION ALL SELECT '91+', 91, 150  -- Max age is 150 for the last bin
+                ),
                 -- Define age bins and count individuals in each bin
                 Age_Distribution AS (    
                     SELECT
-                        CASE 
-                            WHEN age BETWEEN 0 AND 10 THEN '0-10'
-                            WHEN age BETWEEN 11 AND 20 THEN '11-20'
-                            WHEN age BETWEEN 21 AND 30 THEN '21-30'
-                            WHEN age BETWEEN 31 AND 40 THEN '31-40'
-                            WHEN age BETWEEN 41 AND 50 THEN '41-50'
-                            WHEN age BETWEEN 51 AND 60 THEN '51-60'
-                            WHEN age BETWEEN 61 AND 70 THEN '61-70'
-                            WHEN age BETWEEN 71 AND 80 THEN '71-80'
-                            WHEN age BETWEEN 81 AND 90 THEN '81-90'
-                            WHEN age > 90 THEN '91+'
-                        END AS age_bin,
-                        COUNT(*) AS bin_count
-                    FROM Age_Cohort
+                        b.age_bin,
+                        COUNT(ac.person_id) AS bin_count
+                    FROM Age_Bins b
+                    LEFT JOIN Age_Cohort ac on ac.age BETWEEN b.min_age AND b.max_age
                     GROUP BY age_bin  
                 )
             -- Calculate total cohort size and normalize to get probability distribution

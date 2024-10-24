@@ -26,8 +26,8 @@ if __name__ == '__main__':
             print(f'the cohort ethnicity stats: {cohort_data.get_stats("ethnicity")}')
             print(f'the cohort age distributions: {cohort_data.get_distributions("age")}')
 
-        compare_stats = bias.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
-        print(f'compare_stats: {compare_stats}')
+            compare_stats = bias.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
+            print(f'compare_stats: {compare_stats}')
 
     finally:
         if bias is not None:
