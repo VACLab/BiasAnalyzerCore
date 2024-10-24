@@ -93,15 +93,15 @@ class CohortAction:
         """
         Compare the distributions of two cohorts in BiasDatabase.
         """
-        cohort_1_stats = self.bias_db.get_cohort_distributions(cohort_id_1, variable='age')
-        cohort_2_stats = self.bias_db.get_cohort_distributions(cohort_id_2, variable='age')
-        cohort_1_probs = [entry['probability'] for entry in cohort_1_stats]
-        cohort_2_probs = [entry['probability'] for entry in cohort_2_stats]
-        dist = hellinger_distance(cohort_1_probs, cohort_2_probs)
-        comparison_result = {
-            cohort_id_1: cohort_1_stats,
-            cohort_id_2: cohort_2_stats,
-            'hellinger_distance': dist
-        }
+        results = []
+        for variable in self.bias_db.cohort_distribution_variables:
+            cohort_1_stats = self.bias_db.get_cohort_distributions(cohort_id_1, variable=variable)
+            cohort_2_stats = self.bias_db.get_cohort_distributions(cohort_id_2, variable=variable)
+            cohort_1_probs = [entry['probability'] for entry in cohort_1_stats]
+            cohort_2_probs = [entry['probability'] for entry in cohort_2_stats]
+            dist = hellinger_distance(cohort_1_probs, cohort_2_probs)
+            results.append({
+                f'{variable}_hellinger_distance': dist
+            })
 
-        return comparison_result
+        return results
