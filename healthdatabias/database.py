@@ -13,59 +13,94 @@ class BiasDatabase:
                     SELECT p.person_id, EXTRACT(YEAR FROM c.cohort_start_date) - p.year_of_birth AS age 
                     FROM cohort c JOIN person p ON c.subject_id = p.person_id
                     WHERE c.cohort_definition_id = {}
-                    )
-                -- Calculate age distribution statistics    
-                SELECT
-                    COUNT(*) AS total_count,
-                    MIN(age) AS min_age,
-                    MAX(age) AS max_age,
-                    ROUND(AVG(age), 2) AS avg_age,
-                    CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY age) AS INT) AS median_age,
-                    ROUND(STDDEV(age), 2) as stddev_age
-                FROM Age_Cohort                
-            ''',
+                    ),
+                -- Define age bins and count individuals in each bin
+                Age_Distribution AS (    
+                    SELECT
+                        CASE 
+                            WHEN age BETWEEN 0 AND 10 THEN '0-10'
+                            WHEN age BETWEEN 11 AND 20 THEN '11-20'
+                            WHEN age BETWEEN 21 AND 30 THEN '21-30'
+                            WHEN age BETWEEN 31 AND 40 THEN '31-40'
+                            WHEN age BETWEEN 41 AND 50 THEN '41-50'
+                            WHEN age BETWEEN 51 AND 60 THEN '51-60'
+                            WHEN age BETWEEN 61 AND 70 THEN '61-70'
+                            WHEN age BETWEEN 71 AND 80 THEN '71-80'
+                            WHEN age BETWEEN 81 AND 90 THEN '81-90'
+                            WHEN age > 90 THEN '91+'
+                        END AS age_bin,
+                        COUNT(*) AS bin_count
+                    FROM Age_Cohort
+                    GROUP BY age_bin  
+                )
+            -- Calculate total cohort size and normalize to get probability distribution
+            SELECT 
+                age_bin,
+                bin_count,
+                ROUND(bin_count * 1.0 / SUM(bin_count) OVER (), 4) AS probability -- Normalize to get probability
+            FROM Age_Distribution
+            ORDER BY age_bin                  
+            '''
+    }
+    stats_queries = {
+        "age": '''
+                    WITH Age_Cohort AS (
+                        SELECT p.person_id, EXTRACT(YEAR FROM c.cohort_start_date) - p.year_of_birth AS age 
+                        FROM cohort c JOIN person p ON c.subject_id = p.person_id
+                        WHERE c.cohort_definition_id = {}
+                        )
+                    -- Calculate age distribution statistics    
+                    SELECT
+                        COUNT(*) AS total_count,
+                        MIN(age) AS min_age,
+                        MAX(age) AS max_age,
+                        ROUND(AVG(age), 2) AS avg_age,
+                        CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY age) AS INT) AS median_age,
+                        ROUND(STDDEV(age), 2) as stddev_age
+                    FROM Age_Cohort                
+                ''',
         "gender": '''
-                SELECT
-                    CASE
-                        WHEN p.gender_concept_id = 8507 THEN 'male'
-                        WHEN p.gender_concept_id = 8532 THEN 'female'
-                        ELSE 'other'
-                    END AS gender,     
-                    COUNT(*) AS gender_count,
-                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
-                FROM cohort c JOIN person p ON c.subject_id = p.person_id 
-                WHERE c.cohort_definition_id = {}
-                GROUP BY p.gender_concept_id
-            ''',
+                    SELECT
+                        CASE
+                            WHEN p.gender_concept_id = 8507 THEN 'male'
+                            WHEN p.gender_concept_id = 8532 THEN 'female'
+                            ELSE 'other'
+                        END AS gender,     
+                        COUNT(*) AS gender_count,
+                        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+                    FROM cohort c JOIN person p ON c.subject_id = p.person_id 
+                    WHERE c.cohort_definition_id = {}
+                    GROUP BY p.gender_concept_id
+                ''',
         "race": '''
-                SELECT
-                    CASE
-                        WHEN p.race_concept_id = 8516 THEN 'Black or African American'
-                        WHEN p.race_concept_id = 8515 THEN 'Asian'
-                        WHEN p.race_concept_id = 8657 THEN 'American Indian or Alaska Native'
-                        WHEN p.race_concept_id = 8527 THEN 'White'
-                        WHEN p.race_concept_id = 8557 THEN 'Native Hawaiian or Other Pacific Islander'
-                        ELSE 'Other'
-                    END AS race,     
-                    COUNT(*) AS race_count,
-                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS percentage
-                FROM cohort c JOIN person p ON c.subject_id = p.person_id
-                WHERE c.cohort_definition_id = {}
-                GROUP BY p.race_concept_id 
-        ''',
+                    SELECT
+                        CASE
+                            WHEN p.race_concept_id = 8516 THEN 'Black or African American'
+                            WHEN p.race_concept_id = 8515 THEN 'Asian'
+                            WHEN p.race_concept_id = 8657 THEN 'American Indian or Alaska Native'
+                            WHEN p.race_concept_id = 8527 THEN 'White'
+                            WHEN p.race_concept_id = 8557 THEN 'Native Hawaiian or Other Pacific Islander'
+                            ELSE 'Other'
+                        END AS race,     
+                        COUNT(*) AS race_count,
+                        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS percentage
+                    FROM cohort c JOIN person p ON c.subject_id = p.person_id
+                    WHERE c.cohort_definition_id = {}
+                    GROUP BY p.race_concept_id 
+            ''',
         "ethnicity": '''
-                SELECT
-                    CASE
-                        WHEN p.ethnicity_concept_id = 38003563 THEN 'Hispanic or Latino'
-                        WHEN p.ethnicity_concept_id = 38003564 THEN 'Not Hispanic or Latino'
-                        ELSE 'other'
-                    END AS ethnicity,     
-                    COUNT(*) AS ethnicity_count,
-                    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS percentage
-                FROM cohort c JOIN person p ON c.subject_id = p.person_id
-                WHERE c.cohort_definition_id = {}
-                GROUP BY p.ethnicity_concept_id
-        '''
+                    SELECT
+                        CASE
+                            WHEN p.ethnicity_concept_id = 38003563 THEN 'Hispanic or Latino'
+                            WHEN p.ethnicity_concept_id = 38003564 THEN 'Not Hispanic or Latino'
+                            ELSE 'other'
+                        END AS ethnicity,     
+                        COUNT(*) AS ethnicity_count,
+                        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS percentage
+                    FROM cohort c JOIN person p ON c.subject_id = p.person_id
+                    WHERE c.cohort_definition_id = {}
+                    GROUP BY p.ethnicity_concept_id
+            '''
     }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
@@ -162,53 +197,73 @@ class BiasDatabase:
         rows = results.fetchall()
         return [dict(zip(headers, row)) for row in rows]
 
-    def get_cohort_basic_stats(self, cohort_definition_id: int):
+    def _create_person_table(self):
+        if self.omop_cdm_db_url is not None:
+            # need to create person table from OMOP CDM postgreSQL database
+            self.conn.execute(f"""
+                CREATE TABLE IF NOT EXISTS person AS 
+                SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
+            """)
+            return True # success
+        else:
+            return False # failure
+
+    def _execute_query(self, query_str):
+        results = self.conn.execute(query_str)
+        headers = [desc[0] for desc in results.description]
+        rows = results.fetchall()
+        if len(rows) == 0:
+            return []
+        else:
+            return [dict(zip(headers, row)) for row in rows]
+
+    def get_cohort_basic_stats(self, cohort_definition_id: int, variable=''):
         """
         Get aggregation statistics for a cohort from the cohort table.
+        :param cohort_definition_id: cohort definition id representing the cohort
+        :param variable: optional with an empty string as default. If empty, basic stats of
+        the cohort are returned; If set to a specific variable such as age, gender, race,
+        the stats of the specified variable in the cohort are returned
+        :return: cohort stats corresponding to the specified variable
         """
         try:
-            # Query the cohort data to get basic statistics
-            stats_query = f'''
-                WITH cohort_Duration AS (
+            if variable:
+                if self._create_person_table():
+                    query_str = self.__class__.stats_queries.get(variable)
+                    if query_str is None:
+                        raise ValueError(f"Statistics for variable '{variable}' is not available. "
+                                         f"Valid variables are {self.__class__.stats_queries.keys()}")
+                    stats_query = query_str.format(cohort_definition_id)
+                else:
+                    print(f"Cannot connect to the OMOP database to query person table")
+                    return None
+            else:
+                # Query the cohort data to get basic statistics
+                stats_query = f'''
+                    WITH cohort_Duration AS (
+                        SELECT
+                            subject_id,
+                            cohort_start_date,
+                            cohort_end_date,
+                            cohort_end_date - cohort_start_date AS duration_days
+                        FROM
+                            cohort
+                        WHERE cohort_definition_id = {cohort_definition_id}    
+                    )
                     SELECT
-                        subject_id,
-                        cohort_start_date,
-                        cohort_end_date,
-                        cohort_end_date - cohort_start_date AS duration_days
-                    FROM
-                        cohort
-                    WHERE cohort_definition_id = {cohort_definition_id}    
-                )
-                SELECT
-                    COUNT(*) AS total_count,
-                    MIN(cohort_start_date) AS earliest_start_date,
-                    MAX(cohort_start_date) AS latest_start_date,
-                    MIN(cohort_end_date) AS earliest_end_date,
-                    MAX(cohort_end_date) AS latest_end_date,
-                    MIN(duration_days) AS min_duration_days,
-                    MAX(duration_days) AS max_duration_days,
-                    AVG(duration_days) AS avg_duration_days,
-                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_days) AS median_duration,
-                    STDDEV(duration_days) AS stddev_duration
-                FROM cohort_Duration
-                
-            '''
-            result = self.conn.execute(stats_query).fetchall()
-
-            # Convert result into a dictionary for easy access
-            stats = {
-                "subject_count": result[0][0],
-                "earliest_start_date": result[0][1],
-                "latest_start_date": result[0][2],
-                "earliest_end_date": result[0][3],
-                "latest_end_date": result[0][4],
-                "min_duration_days": result[0][5],
-                "max_duration_days": result[0][6],
-                "avg_duration_days": round(result[0][7], 2) if result[0][7] is not None else None,
-                "median_duration_days": int(result[0][8]) if result[0][8] is not None else None,
-                "stddev_duration_days": round(result[0][9], 2) if result[0][9] is not None else None
-            }
-            return stats
+                        COUNT(*) AS total_count,
+                        MIN(cohort_start_date) AS earliest_start_date,
+                        MAX(cohort_start_date) AS latest_start_date,
+                        MIN(cohort_end_date) AS earliest_end_date,
+                        MAX(cohort_end_date) AS latest_end_date,
+                        MIN(duration_days) AS min_duration_days,
+                        MAX(duration_days) AS max_duration_days,
+                        ROUND(AVG(duration_days), 2) AS avg_duration_days,
+                        CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_days) AS INT) AS median_duration,
+                        ROUND(STDDEV(duration_days), 2) AS stddev_duration
+                    FROM cohort_Duration                    
+                '''
+            return self._execute_query(stats_query)
 
         except Exception as e:
             print(f"Error computing cohort basic statistics: {e}")
@@ -219,25 +274,16 @@ class BiasDatabase:
         Get age distribution statistics for a cohort from the cohort table.
         """
         try:
-            if self.omop_cdm_db_url is not None:
-                # need to create person table from OMOP CDM postgreSQL database
-                self.conn.execute(f"""
-                    CREATE TABLE IF NOT EXISTS person AS 
-                    SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
-                """)
-            query_str = self.__class__.distribution_queries.get(variable)
-            if query_str is None:
-                raise ValueError(f"Distribution for variable '{variable}' is not available. "
-                                 f"Valid variables are {self.__class__.distribution_queries.keys()}")
-            query = query_str.format(cohort_definition_id)
-            results = self.conn.execute(query)
-            headers = [desc[0] for desc in results.description]
-            rows = results.fetchall()
-            if len(rows) == 0:
-                return []
+            if self._create_person_table():
+                query_str = self.__class__.distribution_queries.get(variable)
+                if query_str is None:
+                    raise ValueError(f"Distribution for variable '{variable}' is not available. "
+                                     f"Valid variables are {self.__class__.distribution_queries.keys()}")
+                query = query_str.format(cohort_definition_id)
+                return self._execute_query(query)
             else:
-                return [dict(zip(headers, row)) for row in rows]
-
+                print(f"Cannot connect to the OMOP database to query person table")
+                return None
         except Exception as e:
             print(f"Error computing cohort {variable} distributions: {e}")
             return None

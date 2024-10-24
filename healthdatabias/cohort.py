@@ -3,6 +3,7 @@ from sqlalchemy import text
 from datetime import datetime
 from healthdatabias.models import CohortDefinition, Cohort
 from healthdatabias.database import OMOPCDMDatabase, BiasDatabase
+from healthdatabias.utils import hellinger_distance
 
 
 class CohortData:
@@ -28,16 +29,17 @@ class CohortData:
             self._metadata = self.bias_db.get_cohort_definition(self.cohort_id)
         return self._metadata
 
-    @property
-    def stats(self):
+    def get_stats(self, variable=''):
         """
         Get aggregation statistics for the cohort in BiasDatabase.
+        variable is optional with a default empty string. Supported variables are: age, gender,
+        race, and ethnicity.
         """
-        return self.bias_db.get_cohort_basic_stats(self.cohort_id)
+        return self.bias_db.get_cohort_basic_stats(self.cohort_id, variable=variable)
 
     def get_distributions(self, variable):
         """
-        Get distribution statistics for a variable (e.g., age or gender) in a specific cohort in BiasDatabase.
+        Get distribution statistics for a variable (e.g., age) in a specific cohort in BiasDatabase.
         """
         return self.bias_db.get_cohort_distributions(self.cohort_id, variable)
 
@@ -91,13 +93,15 @@ class CohortAction:
         """
         Compare the distributions of two cohorts in BiasDatabase.
         """
-        cohort_1_stats = self.bias_db.get_cohort_basic_stats(cohort_id_1)
-        cohort_2_stats = self.bias_db.get_cohort_basic_stats(cohort_id_2)
-
-        # Compare the statistics, could be comparing distributions, averages, etc.
+        cohort_1_stats = self.bias_db.get_cohort_distributions(cohort_id_1, variable='age')
+        cohort_2_stats = self.bias_db.get_cohort_distributions(cohort_id_2, variable='age')
+        cohort_1_probs = [entry['probability'] for entry in cohort_1_stats]
+        cohort_2_probs = [entry['probability'] for entry in cohort_2_stats]
+        dist = hellinger_distance(cohort_1_probs, cohort_2_probs)
         comparison_result = {
             cohort_id_1: cohort_1_stats,
-            cohort_id_2: cohort_2_stats
+            cohort_id_2: cohort_2_stats,
+            'hellinger_distance': dist
         }
 
         return comparison_result

@@ -19,11 +19,16 @@ if __name__ == '__main__':
             md = cohort_data.metadata
             print(f'cohort_definition: {md}')
             print(f'The first five records in the cohort {cohort_data.data[:5]}')
-            print(f'the cohort stats: {cohort_data.stats}')
+            print(f'the cohort stats: {cohort_data.get_stats()}')
+            print(f'the cohort age stats: {cohort_data.get_stats("age")}')
+            print(f'the cohort gender stats: {cohort_data.get_stats("gender")}')
+            print(f'the cohort race stats: {cohort_data.get_stats("race")}')
+            print(f'the cohort ethnicity stats: {cohort_data.get_stats("ethnicity")}')
             print(f'the cohort age distributions: {cohort_data.get_distributions("age")}')
-            print(f'the cohort gender distributions: {cohort_data.get_distributions("gender")}')
-            print(f'the cohort race distributions: {cohort_data.get_distributions("race")}')
-            print(f'the cohort ethnicity distributions: {cohort_data.get_distributions("ethnicity")}')
+
+        compare_stats = bias.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
+        print(f'compare_stats: {compare_stats}')
+
     finally:
         if bias is not None:
             bias.cleanup()
