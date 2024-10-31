@@ -2,7 +2,9 @@ from pydantic import ValidationError
 from healthdatabias.database import OMOPCDMDatabase, BiasDatabase
 from healthdatabias.cohort import CohortAction
 from healthdatabias.config import load_config
-
+from ipywidgets import VBox, Label
+from ipytree import Tree, Node
+from IPython.display import display
 
 class BIAS:
     _instance = None
@@ -83,20 +85,52 @@ class BIAS:
             return None
         return self.omop_cdm_db.get_concept_hierarchy(concept_id)
 
-    def display_concept_tree(self, concept_tree: dict, level: int = 0):
+    def _build_concept_tree(self, concept_tree: dict) -> Node:
+        """
+            Recursively builds an ipytree Node for a given concept tree.
+            """
+        # Extract concept details
+        details = concept_tree.get("details", {})
+        concept_name = details.get("concept_name", "Unknown Concept")
+        concept_id = details.get("concept_id", "")
+        concept_code = details.get("concept_code", "")
+
+        # Create a label for the current concept
+        label_text = f"{concept_name} (ID: {concept_id}, Code: {concept_code})"
+        node = Node(label_text)
+
+        # Recursively add child nodes
+        for child in concept_tree.get("children", []):
+            child_node = self._build_concept_tree(child)
+            node.add_node(child_node)
+
+        return node
+
+    def display_concept_tree(self, concept_tree: dict, level: int = 0, show_in_text_format=True):
         """
         Recursively prints the concept hierarchy tree in an indented format for display.
         """
         details = concept_tree.get("details", {})
-        if details:
-            print(
-                "  " * level + f"{details['concept_name']} (ID: {details['concept_id']}, "
-                               f"Code: {details['concept_code']})")
-        for child in concept_tree.get("children", []):
-            if child:
-                self.display_concept_tree(child, level + 1)
-        # return empty string to print None being printed at the end of printout
-        return ""
+        if show_in_text_format:
+            if details:
+                print(
+                    "  " * level + f"{details['concept_name']} (ID: {details['concept_id']}, "
+                                   f"Code: {details['concept_code']})")
+            for child in concept_tree.get("children", []):
+                if child:
+                    self.display_concept_tree(child, level + 1)
+            # return empty string to print None being printed at the end of printout
+            return ""
+        else:
+            # Extract concept details
+            # Build the root tree node
+            root_node = self._build_concept_tree(concept_tree)
+            tree = Tree()
+            tree.add_node(root_node)
+            tree.opened = True
+            display(VBox([Label("Concept Hierarchy"), tree]))
+            return None
+
 
     def create_cohort(self, cohort_name, cohort_desc, query, created_by):
         c_action = self._set_cohort_action()

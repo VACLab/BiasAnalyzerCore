@@ -12,8 +12,10 @@ if __name__ == '__main__':
         print(f'concepts for COVID-19: {concepts}')
         print(f'concept_ids for COVID-19: {[concept["concept_id"] for concept in concepts]}')
         concept_tree = bias.get_concept_hierarchy(37311061)
-        print(f'concept hierarchy for COVID-19:')
+        print(f'concept hierarchy for COVID-19 in text format:')
         print(bias.display_concept_tree(concept_tree))
+        print(f'concept hierarchy for COVID-19 in widget tree format:')
+        bias.display_concept_tree(concept_tree,  show_in_text_format=False)
         baseline_cohort_query = ('SELECT c.person_id, c.condition_start_date as cohort_start_date, '
                                  'c.condition_end_date as cohort_end_date '
                                  'FROM condition_occurrence c JOIN '
