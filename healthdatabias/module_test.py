@@ -7,6 +7,13 @@ if __name__ == '__main__':
         bias = BIAS()
         bias.set_config('/home/hongyi/HealthDataBias/config.yaml')
         bias.set_root_omop()
+        print(f'domains: {bias.get_domains()}')
+        concepts = bias.get_concepts("COVID-19", "Condition")
+        print(f'concepts for COVID-19: {concepts}')
+        print(f'concept_ids for COVID-19: {[concept["concept_id"] for concept in concepts]}')
+        concept_tree = bias.get_concept_hierarchy(37311061)
+        print(f'concept hierarchy for COVID-19:')
+        print(bias.display_concept_tree(concept_tree))
         baseline_cohort_query = ('SELECT c.person_id, c.condition_start_date as cohort_start_date, '
                                  'c.condition_end_date as cohort_end_date '
                                  'FROM condition_occurrence c JOIN '

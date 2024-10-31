@@ -62,6 +62,42 @@ class BIAS:
             self.cohort_action = CohortAction(self.omop_cdm_db, self.bias_db)
         return self.cohort_action
 
+    def get_domains(self):
+        if self.omop_cdm_db is None:
+            print('A valid OMOP CDM must be set before getting domains. '
+                  'Call set_root_omop first to set a valid root OMOP CDM')
+            return None
+        return self.omop_cdm_db.get_domains()
+
+    def get_concepts(self, search_term, domain):
+        if self.omop_cdm_db is None:
+            print('A valid OMOP CDM must be set before getting concepts. '
+                  'Call set_root_omop first to set a valid root OMOP CDM')
+            return None
+        return self.omop_cdm_db.get_concepts(search_term, domain)
+
+    def get_concept_hierarchy(self, concept_id):
+        if self.omop_cdm_db is None:
+            print('A valid OMOP CDM must be set before getting concepts. '
+                  'Call set_root_omop first to set a valid root OMOP CDM')
+            return None
+        return self.omop_cdm_db.get_concept_hierarchy(concept_id)
+
+    def display_concept_tree(self, concept_tree: dict, level: int = 0):
+        """
+        Recursively prints the concept hierarchy tree in an indented format for display.
+        """
+        details = concept_tree.get("details", {})
+        if details:
+            print(
+                "  " * level + f"{details['concept_name']} (ID: {details['concept_id']}, "
+                               f"Code: {details['concept_code']})")
+        for child in concept_tree.get("children", []):
+            if child:
+                self.display_concept_tree(child, level + 1)
+        # return empty string to print None being printed at the end of printout
+        return ""
+
     def create_cohort(self, cohort_name, cohort_desc, query, created_by):
         c_action = self._set_cohort_action()
         if c_action:

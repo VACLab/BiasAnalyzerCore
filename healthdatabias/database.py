@@ -2,7 +2,7 @@ import duckdb
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from healthdatabias.models import Cohort, CohortDefinition
 from healthdatabias.sql import *
 
@@ -236,6 +236,111 @@ class OMOPCDMDatabase:
     def get_session(self):
         # Provide a new session for read-only queries
         return self.Session()
+
+    def execute_query(self, query, params={}):
+        omop_session = self.get_session()
+        try:
+            if params:
+                results = omop_session.execute(query, params)
+            else:
+                results = omop_session.execute(query)
+            headers = results.keys()
+            return_result = []
+            for row in results:
+                return_result.append(dict(zip(headers, row)))
+            omop_session.close()
+            return return_result
+        except SQLAlchemyError as e:
+            print(f"Error executing query: {e}")
+            omop_session.close()
+            return []
+
+
+    def get_domains(self) -> list:
+        # find a concept ID based on a search term
+        query = text("""
+                    SELECT distinct domain_id FROM concept
+                    """)
+        return self.execute_query(query)
+
+    def get_concepts(self, search_term: str, domain: str) -> list:
+        # find a concept ID based on a search term
+        search_term_exact = search_term.lower()
+        search_term_suffix = f'{search_term_exact} '
+        search_term_prefix = f' {search_term_exact}'
+        search_term_prefix_suffix = f' {search_term_exact} '
+        query = text("""
+        SELECT concept_id, concept_name, valid_start_date, valid_end_date FROM concept 
+        where domain_id = :domain and
+        (LOWER(concept_name) = :search_term_exact or LOWER(concept_name) LIKE '%' || :search_term_prefix
+        or LOWER(concept_name) LIKE :search_term_suffix || '%'
+        or LOWER(concept_name) LIKE '%' || :search_term_prefix_suffix || '%')
+        """)
+
+        return self.execute_query(query, params={"domain": domain, "search_term_exact": search_term_exact,
+                                          "search_term_prefix": search_term_prefix,
+                                          "search_term_suffix": search_term_suffix,
+                                          "search_term_prefix_suffix": search_term_prefix_suffix})
+
+    def get_concept_hierarchy(self, concept_id: int) -> dict:
+        """
+        Retrieves the full concept hierarchy (ancestors and descendants) for a given concept_id
+        and organizes it into a nested dictionary to represent the tree structure.
+        """
+        query = text("""
+                WITH RECURSIVE concept_hierarchy AS (
+                    SELECT ancestor_concept_id, descendant_concept_id, min_levels_of_separation
+                    FROM concept_ancestor
+                    WHERE ancestor_concept_id = :concept_id OR descendant_concept_id = :concept_id
+        
+                    UNION
+        
+                    SELECT ca.ancestor_concept_id, ca.descendant_concept_id, ca.min_levels_of_separation
+                    FROM concept_ancestor ca
+                    JOIN concept_hierarchy ch ON ca.ancestor_concept_id = ch.descendant_concept_id
+                )
+                SELECT ancestor_concept_id, descendant_concept_id
+                FROM concept_hierarchy
+                WHERE min_levels_of_separation > 0
+                """)
+
+        results = self.execute_query(query, params={"concept_id": concept_id})
+
+        # Collect all concept IDs involved in the hierarchy
+        concept_ids = set()
+        for row in results:
+            concept_ids.add(row['ancestor_concept_id'])
+            concept_ids.add(row['descendant_concept_id'])
+
+        # Fetch details of each concept
+        concept_details = {}
+        if concept_ids:
+            query = text("""
+                    SELECT concept_id, concept_name, vocabulary_id, concept_code
+                    FROM concept
+                    WHERE concept_id IN :concept_ids
+                    """)
+
+            result = self.execute_query(query, params={"concept_ids": tuple(concept_ids)})
+            concept_details = {row['concept_id']: row for row in result}
+
+        # Build the hierarchy tree using a dictionary
+        hierarchy = {}
+        for row in results:
+            ancestor_id = row['ancestor_concept_id']
+            descendant_id = row['descendant_concept_id']
+
+            if ancestor_id not in hierarchy:
+                hierarchy[ancestor_id] = {"details": concept_details[ancestor_id], "children": []}
+            if descendant_id not in hierarchy:
+                hierarchy[descendant_id] = {"details": concept_details[descendant_id], "children": []}
+
+            # Link descendants to their ancestor node
+            hierarchy[ancestor_id]["children"].append(hierarchy[descendant_id])
+
+        # Return the hierarchy tree starting from the main concept
+        return hierarchy[concept_id]
+
 
     def close(self):
         # Dispose of the connection (if needed)

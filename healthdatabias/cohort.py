@@ -7,9 +7,10 @@ from healthdatabias.utils import hellinger_distance
 
 
 class CohortData:
-    def __init__(self, cohort_id: int, bias_db: BiasDatabase):
+    def __init__(self, cohort_id: int, bias_db: BiasDatabase, omop_db: OMOPCDMDatabase):
         self.cohort_id = cohort_id
         self.bias_db = bias_db
+        self.omop_db = omop_db
         self._cohort_data = None # cache the cohort data
         self._metadata = None
 
@@ -84,7 +85,7 @@ class CohortAction:
                 self.bias_db.create_cohort(cohort)
             print(f"Cohort {cohort_name} successfully created.")
             omop_session.close()
-            return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db)
+            return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
         except SQLAlchemyError as e:
             print(f"Error executing query: {e}")
             omop_session.close()
