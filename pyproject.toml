@@ -17,6 +17,7 @@ pyyaml = "^6.0.2"
 pydantic = "^2.9.2"
 psycopg2 = "^2.9.1"
 ipytree = "^0.2.2"
+ipywidgets = "^8.1.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.3"
