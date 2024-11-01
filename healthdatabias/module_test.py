@@ -1,4 +1,5 @@
 from healthdatabias.api import BIAS
+import pandas as pd
 
 
 if __name__ == '__main__':
@@ -7,15 +8,18 @@ if __name__ == '__main__':
         bias = BIAS()
         bias.set_config('/home/hongyi/HealthDataBias/config.yaml')
         bias.set_root_omop()
-        print(f'domains: {bias.get_domains()}')
-        concepts = bias.get_concepts("COVID-19", "Condition")
+        print(f'domains and vocabularies: {bias.get_domains_and_vocabularies()}')
+        concepts = bias.get_concepts("COVID-19", "Condition", "SNOMED")
         print(f'concepts for COVID-19: {concepts}')
-        print(f'concept_ids for COVID-19: {[concept["concept_id"] for concept in concepts]}')
-        concept_tree = bias.get_concept_hierarchy(37311061)
-        print(f'concept hierarchy for COVID-19 in text format:')
-        print(bias.display_concept_tree(concept_tree))
-        print(f'concept hierarchy for COVID-19 in widget tree format:')
-        bias.display_concept_tree(concept_tree,  show_in_text_format=False)
+        parent_concept_tree, children_concept_tree = bias.get_concept_hierarchy(37311061)
+        print(f'parent concept hierarchy for COVID-19 in text format:')
+        print(bias.display_concept_tree(parent_concept_tree))
+        print(f'children concept hierarchy for COVID-19 in text format:')
+        print(bias.display_concept_tree(children_concept_tree))
+        print(f'parent concept hierarchy for COVID-19 in widget tree format:')
+        bias.display_concept_tree(parent_concept_tree,  show_in_text_format=False)
+        print(f'children concept hierarchy for COVID-19 in widget tree format:')
+        bias.display_concept_tree(children_concept_tree, show_in_text_format=False)
         baseline_cohort_query = ('SELECT c.person_id, c.condition_start_date as cohort_start_date, '
                                  'c.condition_end_date as cohort_end_date '
                                  'FROM condition_occurrence c JOIN '

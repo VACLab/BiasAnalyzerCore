@@ -5,6 +5,8 @@ from healthdatabias.config import load_config
 from ipywidgets import VBox, Label
 from ipytree import Tree, Node
 from IPython.display import display
+from healthdatabias.utils import get_direction_arrow
+
 
 class BIAS:
     _instance = None
@@ -64,19 +66,19 @@ class BIAS:
             self.cohort_action = CohortAction(self.omop_cdm_db, self.bias_db)
         return self.cohort_action
 
-    def get_domains(self):
+    def get_domains_and_vocabularies(self):
         if self.omop_cdm_db is None:
             print('A valid OMOP CDM must be set before getting domains. '
                   'Call set_root_omop first to set a valid root OMOP CDM')
             return None
-        return self.omop_cdm_db.get_domains()
+        return self.omop_cdm_db.get_domains_and_vocabularies()
 
-    def get_concepts(self, search_term, domain):
+    def get_concepts(self, search_term, domain, vocabulary):
         if self.omop_cdm_db is None:
             print('A valid OMOP CDM must be set before getting concepts. '
                   'Call set_root_omop first to set a valid root OMOP CDM')
             return None
-        return self.omop_cdm_db.get_concepts(search_term, domain)
+        return self.omop_cdm_db.get_concepts(search_term, domain, vocabulary)
 
     def get_concept_hierarchy(self, concept_id):
         if self.omop_cdm_db is None:
@@ -85,7 +87,7 @@ class BIAS:
             return None
         return self.omop_cdm_db.get_concept_hierarchy(concept_id)
 
-    def _build_concept_tree(self, concept_tree: dict) -> Node:
+    def _build_concept_tree(self, concept_tree: dict, tree_type: str) -> Node:
         """
             Recursively builds an ipytree Node for a given concept tree.
             """
@@ -94,37 +96,48 @@ class BIAS:
         concept_name = details.get("concept_name", "Unknown Concept")
         concept_id = details.get("concept_id", "")
         concept_code = details.get("concept_code", "")
-
+        direction_arrow = get_direction_arrow(tree_type)
         # Create a label for the current concept
-        label_text = f"{concept_name} (ID: {concept_id}, Code: {concept_code})"
+        label_text = f"{direction_arrow} {concept_name} (ID: {concept_id}, Code: {concept_code})"
         node = Node(label_text)
 
         # Recursively add child nodes
-        for child in concept_tree.get("children", []):
-            child_node = self._build_concept_tree(child)
+        for child in concept_tree.get(tree_type, []):
+            child_node = self._build_concept_tree(child, tree_type)
             node.add_node(child_node)
 
         return node
 
-    def display_concept_tree(self, concept_tree: dict, level: int = 0, show_in_text_format=True):
+    def display_concept_tree(self, concept_tree: dict, level: int = 0, show_in_text_format=True, tree_type=None):
         """
         Recursively prints the concept hierarchy tree in an indented format for display.
         """
         details = concept_tree.get("details", {})
+        if tree_type is None or tree_type not in ['parents', 'children']:
+            if 'parents' in concept_tree:
+                tree_type = 'parents'
+            elif 'children' in concept_tree:
+                tree_type = 'children'
+            else:
+                print('The input concept tree must contain parents or children key as the type of the tree.')
+                return ''
+
         if show_in_text_format:
             if details:
+                direction_arrow = get_direction_arrow(tree_type)
                 print(
-                    "  " * level + f"{details['concept_name']} (ID: {details['concept_id']}, "
+                    "  " * level + f"{direction_arrow} {details['concept_name']} (ID: {details['concept_id']}, "
                                    f"Code: {details['concept_code']})")
-            for child in concept_tree.get("children", []):
+
+            for child in concept_tree.get(tree_type, []):
                 if child:
-                    self.display_concept_tree(child, level + 1)
+                    self.display_concept_tree(child, level + 1, tree_type=tree_type, show_in_text_format=True)
             # return empty string to print None being printed at the end of printout
             return ""
         else:
             # Extract concept details
             # Build the root tree node
-            root_node = self._build_concept_tree(concept_tree)
+            root_node = self._build_concept_tree(concept_tree, tree_type)
             tree = Tree()
             tree.add_node(root_node)
             tree.opened = True

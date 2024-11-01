@@ -1,5 +1,9 @@
 import numpy as np
 
+def get_direction_arrow(tree_type):
+    # the two unicodes are for up and down arrows
+    return "\U0001F53C" if tree_type == 'parents' else "\U0001F53D"
+
 
 def hellinger_distance(p, q):
     """
