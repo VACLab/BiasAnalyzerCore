@@ -1,7 +1,7 @@
-<table border="0">
-  <tr>
-    <td><img src="./assets/logo.png" alt="Project Logo" width="100" style="margin-right: 10px;"></td>
-    <td><h1 style="margin: 0;">BiasAnalyzer (BA)</h1></td>
+<table>
+  <tr style="border: none;">
+    <td style="border: none;"><img src="./assets/logo.png" alt="Project Logo" width="100" style="margin-right: 10px;"></td>
+    <td style="border: none;"><h1 style="margin: 0;">BiasAnalyzer (BA)</h1></td>
   </tr>
 </table>
 
