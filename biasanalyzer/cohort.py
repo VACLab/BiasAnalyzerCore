@@ -1,9 +1,9 @@
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 from datetime import datetime
-from healthdatabias.models import CohortDefinition, Cohort
-from healthdatabias.database import OMOPCDMDatabase, BiasDatabase
-from healthdatabias.utils import hellinger_distance
+from biasanalyzer.models import CohortDefinition, Cohort
+from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
+from biasanalyzer.utils import hellinger_distance
 
 
 class CohortData:

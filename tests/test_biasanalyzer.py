@@ -1,4 +1,4 @@
-from healthdatabias import __version__
+from biasanalyzer import __version__
 
 
 def test_version():

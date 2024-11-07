@@ -1,4 +1,4 @@
-from healthdatabias.api import BIAS
+from biasanalyzer.api import BIAS
 
 
 if __name__ == '__main__':

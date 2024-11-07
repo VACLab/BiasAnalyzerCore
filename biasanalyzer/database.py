@@ -3,8 +3,8 @@ from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
-from healthdatabias.models import Cohort, CohortDefinition
-from healthdatabias.sql import *
+from biasanalyzer.models import Cohort, CohortDefinition
+from biasanalyzer.sql import *
 
 class BiasDatabase:
     distribution_queries = {

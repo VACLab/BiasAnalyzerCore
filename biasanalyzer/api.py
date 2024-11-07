@@ -1,11 +1,11 @@
 from pydantic import ValidationError
-from healthdatabias.database import OMOPCDMDatabase, BiasDatabase
-from healthdatabias.cohort import CohortAction
-from healthdatabias.config import load_config
+from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
+from biasanalyzer.cohort import CohortAction
+from biasanalyzer.config import load_config
 from ipywidgets import VBox, Label
 from ipytree import Tree, Node
 from IPython.display import display
-from healthdatabias.utils import get_direction_arrow
+from biasanalyzer.utils import get_direction_arrow
 
 
 class BIAS:

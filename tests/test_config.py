@@ -1,5 +1,5 @@
 import os
-from healthdatabias.config import load_config
+from biasanalyzer.config import load_config
 
 
 def test_load_config():

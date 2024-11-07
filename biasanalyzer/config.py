@@ -1,5 +1,5 @@
 import yaml
-from healthdatabias.models import Configuration
+from biasanalyzer.models import Configuration
 
 
 def load_config(config_file):
