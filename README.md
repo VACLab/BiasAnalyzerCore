@@ -1,9 +1,7 @@
-<table>
-  <tr style="border: none;">
-    <td style="border: none;"><img src="./assets/logo.png" alt="Project Logo" width="100" style="margin-right: 10px;"></td>
-    <td style="border: none;"><h1 style="margin: 0;">BiasAnalyzer (BA)</h1></td>
-  </tr>
-</table>
+<h1>
+  <img src="./assets/logo.png" alt="Project Logo" width="50" style="vertical-align: middle; margin-right: 10px;">
+  BiasAnalyzer (BA)
+</h1>
 
 BiasAnalyzer is a Python package that enables users to track, quantify, analyze, and communicate bias in cohort 
 selection. In this context, bias is viewed as lack of representation within a cohort compared to a baseline population.
