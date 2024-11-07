@@ -1,4 +1,4 @@
-<table>
+<table border="0">
   <tr>
     <td><img src="./assets/logo.png" alt="Project Logo" width="100" style="margin-right: 10px;"></td>
     <td><h1 style="margin: 0;">BiasAnalyzer (BA)</h1></td>
