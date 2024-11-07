@@ -1,4 +1,4 @@
-# example configuration for HealthDataBias
+# example configuration for BiasAnalyzer
 
 root_omop_cdm_database:
   username: test_username

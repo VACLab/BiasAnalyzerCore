@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "HealthDataBias"
+name = "BiasAnalyzer"
 version = "0.1.0"
 description = "A python package for health data bias quantification to support visual analytics techniques for tracking and communicating bias in cohort selection"
 authors = ["Hong Yi <hongyi@renci.org>"]

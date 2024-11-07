@@ -5,7 +5,7 @@ if __name__ == '__main__':
     bias = None
     try:
         bias = BIAS()
-        bias.set_config('/home/hongyi/HealthDataBias/config.yaml')
+        bias.set_config('/home/hongyi/BiasAnalyzer/config.yaml')
         bias.set_root_omop()
         print(f'domains and vocabularies: {bias.get_domains_and_vocabularies()}')
         concepts = bias.get_concepts("COVID-19", "Condition", "SNOMED")
