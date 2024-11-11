@@ -73,10 +73,13 @@ class BIAS:
             return None
         return self.omop_cdm_db.get_domains_and_vocabularies()
 
-    def get_concepts(self, search_term, domain, vocabulary):
+    def get_concepts(self, search_term, domain=None, vocabulary=None):
         if self.omop_cdm_db is None:
             print('A valid OMOP CDM must be set before getting concepts. '
                   'Call set_root_omop first to set a valid root OMOP CDM')
+            return None
+        if domain is None and vocabulary is None:
+            print('either domain or vocabulary must be set to constrain the number of returned concepts')
             return None
         return self.omop_cdm_db.get_concepts(search_term, domain, vocabulary)
 

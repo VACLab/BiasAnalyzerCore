@@ -1,4 +1,5 @@
 import duckdb
+from typing import Optional
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
@@ -263,25 +264,39 @@ class OMOPCDMDatabase:
                     """)
         return self.execute_query(query)
 
-    def get_concepts(self, search_term: str, domain: str, vocab: str) -> list:
+    def get_concepts(self, search_term: str, domain: Optional[str], vocab: Optional[str]) -> list:
         # find a concept ID based on a search term
         search_term_exact = search_term.lower()
         search_term_suffix = f'{search_term_exact} '
         search_term_prefix = f' {search_term_exact}'
         search_term_prefix_suffix = f' {search_term_exact} '
-        query = text("""
+        param_set = {
+            "search_term_exact": search_term_exact,
+            "search_term_prefix": search_term_prefix,
+            "search_term_suffix": search_term_suffix,
+            "search_term_prefix_suffix": search_term_prefix_suffix
+        }
+        if domain is not None and vocab is not None:
+            condition_str = "domain_id = :domain and vocabulary_id = :vocabulary"
+            param_set['domain'] = domain
+            param_set['vocabulary'] = vocab
+        elif domain is None:
+            condition_str = "vocabulary_id = :vocabulary"
+            param_set['vocabulary'] = vocab
+        else:
+            # vocab is None
+            condition_str = "domain_id = :domain"
+            param_set['domain'] = domain
+    
+        query = text(f"""
         SELECT concept_id, concept_name, valid_start_date, valid_end_date FROM concept 
-        where domain_id = :domain and vocabulary_id = :vocabulary and 
+        where {condition_str} and 
         (LOWER(concept_name) = :search_term_exact or LOWER(concept_name) LIKE '%' || :search_term_prefix
         or LOWER(concept_name) LIKE :search_term_suffix || '%'
         or LOWER(concept_name) LIKE '%' || :search_term_prefix_suffix || '%')
         """)
 
-        return self.execute_query(query, params={"domain": domain, "vocabulary": vocab,
-                                                 "search_term_exact": search_term_exact,
-                                                 "search_term_prefix": search_term_prefix,
-                                                 "search_term_suffix": search_term_suffix,
-                                                 "search_term_prefix_suffix": search_term_prefix_suffix})
+        return self.execute_query(query, params=param_set)
 
     def get_concept_hierarchy(self, concept_id: int):
         """
