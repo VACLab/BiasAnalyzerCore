@@ -1,4 +1,5 @@
 import duckdb
+from typing import Optional
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,6 +17,9 @@ class BiasDatabase:
         "gender": GENDER_STATS_QUERY,
         "race": RACE_STATS_QUERY,
         "ethnicity": ETHNICITY_STATS_QUERY
+    }
+    cohort_concept_queries = {
+        'condition_occurrence': COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY
     }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
@@ -112,12 +116,12 @@ class BiasDatabase:
         rows = results.fetchall()
         return [dict(zip(headers, row)) for row in rows]
 
-    def _create_person_table(self):
+    def _create_omop_table(self, table_name):
         if self.omop_cdm_db_url is not None:
             # need to create person table from OMOP CDM postgreSQL database
             self.conn.execute(f"""
-                CREATE TABLE IF NOT EXISTS person AS 
-                SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
+                CREATE TABLE IF NOT EXISTS {table_name} AS 
+                SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', {table_name})
             """)
             return True # success
         else:
@@ -143,14 +147,14 @@ class BiasDatabase:
         """
         try:
             if variable:
-                if self._create_person_table():
+                if self._create_omop_table('person'):
                     query_str = self.__class__.stats_queries.get(variable)
                     if query_str is None:
                         raise ValueError(f"Statistics for variable '{variable}' is not available. "
                                          f"Valid variables are {self.__class__.stats_queries.keys()}")
                     stats_query = query_str.format(cohort_definition_id)
                 else:
-                    print(f"Cannot connect to the OMOP database to query person table")
+                    print("Cannot connect to the OMOP database to query person table")
                     return None
             else:
                 # Query the cohort data to get basic statistics
@@ -193,7 +197,7 @@ class BiasDatabase:
         Get age distribution statistics for a cohort from the cohort table.
         """
         try:
-            if self._create_person_table():
+            if self._create_omop_table('person'):
                 query_str = self.__class__.distribution_queries.get(variable)
                 if query_str is None:
                     raise ValueError(f"Distribution for variable '{variable}' is not available. "
@@ -201,11 +205,32 @@ class BiasDatabase:
                 query = query_str.format(cohort_definition_id)
                 return self._execute_query(query)
             else:
-                print(f"Cannot connect to the OMOP database to query person table")
+                print("Cannot connect to the OMOP database to query person table")
                 return None
         except Exception as e:
             print(f"Error computing cohort {variable} distributions: {e}")
             return None
+
+    def get_cohort_concept_stats(self, cohort_definition_id: int):
+        """
+        Get concept statistics for a cohort from the cohort table.
+        """
+        concept_stats = {}
+        try:
+            if self._create_omop_table('concept'):
+                for key, query_str in self.__class__.cohort_concept_queries.items():
+                    if self._create_omop_table(key):
+                        query = query_str.format(cid=cohort_definition_id)
+                        concept_stats[key] = self._execute_query(query)
+                    else:
+                        print(f"Cannot connect to the OMOP database to query {key} table")
+                        return concept_stats
+            else:
+                print("Cannot connect to the OMOP database to query concept table")
+                return concept_stats
+        except Exception as e:
+            print(f"Error computing cohort concept stats: {e}")
+        return concept_stats
 
     def close(self):
         self.conn.close()
@@ -263,25 +288,39 @@ class OMOPCDMDatabase:
                     """)
         return self.execute_query(query)
 
-    def get_concepts(self, search_term: str, domain: str, vocab: str) -> list:
+    def get_concepts(self, search_term: str, domain: Optional[str], vocab: Optional[str]) -> list:
         # find a concept ID based on a search term
         search_term_exact = search_term.lower()
         search_term_suffix = f'{search_term_exact} '
         search_term_prefix = f' {search_term_exact}'
         search_term_prefix_suffix = f' {search_term_exact} '
-        query = text("""
+        param_set = {
+            "search_term_exact": search_term_exact,
+            "search_term_prefix": search_term_prefix,
+            "search_term_suffix": search_term_suffix,
+            "search_term_prefix_suffix": search_term_prefix_suffix
+        }
+        if domain is not None and vocab is not None:
+            condition_str = "domain_id = :domain and vocabulary_id = :vocabulary"
+            param_set['domain'] = domain
+            param_set['vocabulary'] = vocab
+        elif domain is None:
+            condition_str = "vocabulary_id = :vocabulary"
+            param_set['vocabulary'] = vocab
+        else:
+            # vocab is None
+            condition_str = "domain_id = :domain"
+            param_set['domain'] = domain
+
+        query = text(f"""
         SELECT concept_id, concept_name, valid_start_date, valid_end_date FROM concept 
-        where domain_id = :domain and vocabulary_id = :vocabulary and 
+        where {condition_str} and 
         (LOWER(concept_name) = :search_term_exact or LOWER(concept_name) LIKE '%' || :search_term_prefix
         or LOWER(concept_name) LIKE :search_term_suffix || '%'
         or LOWER(concept_name) LIKE '%' || :search_term_prefix_suffix || '%')
         """)
 
-        return self.execute_query(query, params={"domain": domain, "vocabulary": vocab,
-                                                 "search_term_exact": search_term_exact,
-                                                 "search_term_prefix": search_term_prefix,
-                                                 "search_term_suffix": search_term_suffix,
-                                                 "search_term_prefix_suffix": search_term_prefix_suffix})
+        return self.execute_query(query, params=param_set)
 
     def get_concept_hierarchy(self, concept_id: int):
         """
