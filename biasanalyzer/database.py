@@ -18,6 +18,9 @@ class BiasDatabase:
         "race": RACE_STATS_QUERY,
         "ethnicity": ETHNICITY_STATS_QUERY
     }
+    cohort_concept_queries = {
+        'condition_occurrence': COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY
+    }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -113,12 +116,12 @@ class BiasDatabase:
         rows = results.fetchall()
         return [dict(zip(headers, row)) for row in rows]
 
-    def _create_person_table(self):
+    def _create_omop_table(self, table_name):
         if self.omop_cdm_db_url is not None:
             # need to create person table from OMOP CDM postgreSQL database
             self.conn.execute(f"""
-                CREATE TABLE IF NOT EXISTS person AS 
-                SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', 'person')
+                CREATE TABLE IF NOT EXISTS {table_name} AS 
+                SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', {table_name})
             """)
             return True # success
         else:
@@ -144,14 +147,14 @@ class BiasDatabase:
         """
         try:
             if variable:
-                if self._create_person_table():
+                if self._create_omop_table('person'):
                     query_str = self.__class__.stats_queries.get(variable)
                     if query_str is None:
                         raise ValueError(f"Statistics for variable '{variable}' is not available. "
                                          f"Valid variables are {self.__class__.stats_queries.keys()}")
                     stats_query = query_str.format(cohort_definition_id)
                 else:
-                    print(f"Cannot connect to the OMOP database to query person table")
+                    print("Cannot connect to the OMOP database to query person table")
                     return None
             else:
                 # Query the cohort data to get basic statistics
@@ -194,7 +197,7 @@ class BiasDatabase:
         Get age distribution statistics for a cohort from the cohort table.
         """
         try:
-            if self._create_person_table():
+            if self._create_omop_table('person'):
                 query_str = self.__class__.distribution_queries.get(variable)
                 if query_str is None:
                     raise ValueError(f"Distribution for variable '{variable}' is not available. "
@@ -202,11 +205,32 @@ class BiasDatabase:
                 query = query_str.format(cohort_definition_id)
                 return self._execute_query(query)
             else:
-                print(f"Cannot connect to the OMOP database to query person table")
+                print("Cannot connect to the OMOP database to query person table")
                 return None
         except Exception as e:
             print(f"Error computing cohort {variable} distributions: {e}")
             return None
+
+    def get_cohort_concept_stats(self, cohort_definition_id: int):
+        """
+        Get concept statistics for a cohort from the cohort table.
+        """
+        concept_stats = {}
+        try:
+            if self._create_omop_table('concept'):
+                for key, query_str in self.__class__.cohort_concept_queries.items():
+                    if self._create_omop_table(key):
+                        query = query_str.format(cid=cohort_definition_id)
+                        concept_stats[key] = self._execute_query(query)
+                    else:
+                        print(f"Cannot connect to the OMOP database to query {key} table")
+                        return concept_stats
+            else:
+                print("Cannot connect to the OMOP database to query concept table")
+                return concept_stats
+        except Exception as e:
+            print(f"Error computing cohort concept stats: {e}")
+        return concept_stats
 
     def close(self):
         self.conn.close()
@@ -287,7 +311,7 @@ class OMOPCDMDatabase:
             # vocab is None
             condition_str = "domain_id = :domain"
             param_set['domain'] = domain
-    
+
         query = text(f"""
         SELECT concept_id, concept_name, valid_start_date, valid_end_date FROM concept 
         where {condition_str} and 
