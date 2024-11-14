@@ -313,7 +313,7 @@ class OMOPCDMDatabase:
             param_set['domain'] = domain
 
         query = text(f"""
-        SELECT concept_id, concept_name, valid_start_date, valid_end_date FROM concept 
+        SELECT concept_id, concept_name, valid_start_date, valid_end_date, domain_id, vocabulary_id FROM concept 
         where {condition_str} and 
         (LOWER(concept_name) = :search_term_exact or LOWER(concept_name) LIKE '%' || :search_term_prefix
         or LOWER(concept_name) LIKE :search_term_suffix || '%'
