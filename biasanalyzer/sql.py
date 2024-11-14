@@ -154,3 +154,24 @@ COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
     ORDER BY 
         prevalence DESC;
 '''
+COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
+    -- Join the cohort table with a clinical table, e.g., drug_exposure
+    SELECT
+        c.concept_id,
+        c.concept_name,
+        COUNT(DISTINCT ct.subject_id) AS count_in_cohort,
+        (COUNT(DISTINCT ct.subject_id) * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence
+    FROM
+        cohort ct
+    JOIN
+        drug_exposure de ON ct.subject_id = de.person_id
+        AND de.drug_exposure_start_date >= ct.cohort_start_date
+        AND (de.drug_exposure_start_date IS NULL OR de.drug_exposure_start_date <= ct.cohort_end_date)
+    JOIN
+        concept c ON de.drug_concept_id = c.concept_id
+    WHERE ct.cohort_definition_id = {cid}    
+    GROUP BY
+        c.concept_id, c.concept_name
+    ORDER BY 
+        prevalence DESC;
+'''

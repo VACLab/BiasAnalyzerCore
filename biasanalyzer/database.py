@@ -19,7 +19,8 @@ class BiasDatabase:
         "ethnicity": ETHNICITY_STATS_QUERY
     }
     cohort_concept_queries = {
-        'condition_occurrence': COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY
+        'condition_occurrence': COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY,
+        'drug_exposure': COHORT_CONCEPT_DRUG_PREVALENCE_QUERY
     }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
