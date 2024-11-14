@@ -262,7 +262,7 @@ class OMOPCDMDatabase:
         # Provide a new session for read-only queries
         return self.Session()
 
-    def execute_query(self, query, params={}):
+    def execute_query(self, query, params=None):
         omop_session = self.get_session()
         try:
             if params:
@@ -284,7 +284,7 @@ class OMOPCDMDatabase:
     def get_domains_and_vocabularies(self) -> list:
         # find a concept ID based on a search term
         query = text("""
-                    SELECT distinct domain_id, vocabulary_id FROM concept
+                    SELECT distinct domain_id, vocabulary_id FROM concept order by domain_id, vocabulary_id
                     """)
         return self.execute_query(query)
 
@@ -318,6 +318,7 @@ class OMOPCDMDatabase:
         (LOWER(concept_name) = :search_term_exact or LOWER(concept_name) LIKE '%' || :search_term_prefix
         or LOWER(concept_name) LIKE :search_term_suffix || '%'
         or LOWER(concept_name) LIKE '%' || :search_term_prefix_suffix || '%')
+        ORDER BY concept_id
         """)
 
         return self.execute_query(query, params=param_set)

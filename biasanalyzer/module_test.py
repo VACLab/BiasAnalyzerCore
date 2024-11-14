@@ -32,14 +32,15 @@ def condition_cohort_test(bias_obj):
 
 
 def concept_test(bias_obj):
-    print(f'domains and vocabularies: {bias_obj.get_domains_and_vocabularies()}')
-    concepts = bias_obj.get_concepts("COVID-19")
+    print(f'domains and vocabularies: \n{pd.DataFrame(bias_obj.get_domains_and_vocabularies())}')
+    # calling get_concepts() without passing in domain and vocabulary should raise an exception
+    bias_obj.get_concepts("COVID-19")
     concepts = bias_obj.get_concepts("COVID-19", "Condition", "SNOMED")
-    print(f'concepts for COVID-19 in Condition domain with SNOMED vocabulary: {concepts}')
+    print(f'concepts for COVID-19 in Condition domain with SNOMED vocabulary: \n{pd.DataFrame(concepts)}')
     concepts = bias_obj.get_concepts("COVID-19", domain="Condition")
-    print(f'concepts for COVID-19 in Condition domain: {concepts}')
+    print(f'concepts for COVID-19 in Condition domain: \n{pd.DataFrame(concepts)}')
     concepts = bias_obj.get_concepts("COVID-19", vocabulary="SNOMED")
-    print(f'concepts for COVID-19 in SNOMED vocabulary: {concepts}')
+    print(f'concepts for COVID-19 in SNOMED vocabulary: \n{pd.DataFrame(concepts)}')
 
     parent_concept_tree, children_concept_tree = bias_obj.get_concept_hierarchy(37311061)
     print('parent concept hierarchy for COVID-19 in text format:')
@@ -57,13 +58,14 @@ if __name__ == '__main__':
     bias = None
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 1000)
     try:
         bias = BIAS()
         bias.set_config('/home/hongyi/BiasAnalyzer/config.yaml')
         bias.set_root_omop()
 
         condition_cohort_test(bias)
-
+        concept_test(bias)
     finally:
         if bias is not None:
             bias.cleanup()
