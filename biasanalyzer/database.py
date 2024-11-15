@@ -218,7 +218,7 @@ class BiasDatabase:
         """
         concept_stats = {}
         try:
-            if self._create_omop_table('concept'):
+            if self._create_omop_table('concept') and self._create_omop_table('concept_ancestor'):
                 for key, query_str in self.__class__.cohort_concept_queries.items():
                     if self._create_omop_table(key):
                         query = query_str.format(cid=cohort_definition_id)

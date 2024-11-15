@@ -134,44 +134,88 @@ ETHNICITY_STATS_QUERY = '''
 '''
 
 COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
-    -- Join the cohort table with a clinical table, e.g., condition_occurrence
+    WITH cohort_conditions AS (
+        -- Compute the counts for each condition node
+        SELECT
+            co.condition_concept_id AS concept_id,
+            ct.subject_id
+        FROM
+            cohort ct
+        JOIN
+            condition_occurrence co ON ct.subject_id = co.person_id
+            AND co.condition_start_date >= ct.cohort_start_date
+            AND (co.condition_end_date IS NULL OR co.condition_start_date <= ct.cohort_end_date)
+        WHERE ct.cohort_definition_id = {cid}       
+    ),
+    aggregated_counts AS (
+        -- Aggregate counts for parent nodes using the concept_ancestor table
+        SELECT
+            ca.ancestor_concept_id AS concept_id,
+            COUNT(DISTINCT cc.subject_id) AS count_in_cohort
+        FROM
+            cohort_conditions cc
+        JOIN
+            concept_ancestor ca 
+            ON cc.concept_id = ca.descendant_concept_id
+        WHERE 
+            ca.min_levels_of_separation >= 0 -- Ensure valid ancestor relationships
+        GROUP BY
+            ca.ancestor_concept_id
+    )
+    -- Combine individual and aggregated counts with concept details
     SELECT
         c.concept_id,
         c.concept_name,
-        COUNT(DISTINCT ct.subject_id) AS count_in_cohort,
-        (COUNT(DISTINCT ct.subject_id) * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence
+        ac.count_in_cohort,
+        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence
     FROM
-        cohort ct
+        aggregated_counts ac
     JOIN
-        condition_occurrence co ON ct.subject_id = co.person_id
-        AND co.condition_start_date >= ct.cohort_start_date
-        AND (co.condition_end_date IS NULL OR co.condition_start_date <= ct.cohort_end_date)
-    JOIN
-        concept c ON co.condition_concept_id = c.concept_id
-    WHERE ct.cohort_definition_id = {cid}    
-    GROUP BY
-        c.concept_id, c.concept_name
+        concept c 
+        ON ac.concept_id = c.concept_id
     ORDER BY 
         prevalence DESC;
 '''
 COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
-    -- Join the cohort table with a clinical table, e.g., drug_exposure
+    WITH cohort_drugs AS (
+        -- Compute the counts for each condition node
+        SELECT
+            de.drug_concept_id AS concept_id,
+            ct.subject_id
+        FROM
+            cohort ct
+        JOIN
+            drug_exposure de ON ct.subject_id = de.person_id
+            AND de.drug_exposure_start_date >= ct.cohort_start_date
+            AND (de.drug_exposure_start_date IS NULL OR de.drug_exposure_start_date <= ct.cohort_end_date)
+        WHERE ct.cohort_definition_id = {cid}       
+    ),
+    aggregated_counts AS (
+        -- Aggregate counts for parent nodes using the concept_ancestor table
+        SELECT
+            ca.ancestor_concept_id AS concept_id,
+            COUNT(DISTINCT cd.subject_id) AS count_in_cohort
+        FROM
+            cohort_drugs cd
+        JOIN
+            concept_ancestor ca 
+            ON cd.concept_id = ca.descendant_concept_id
+        WHERE 
+            ca.min_levels_of_separation >= 0 -- Ensure valid ancestor relationships
+        GROUP BY
+            ca.ancestor_concept_id
+    )
+    -- Combine individual and aggregated counts with concept details
     SELECT
         c.concept_id,
         c.concept_name,
-        COUNT(DISTINCT ct.subject_id) AS count_in_cohort,
-        (COUNT(DISTINCT ct.subject_id) * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence
+        ac.count_in_cohort,
+        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence
     FROM
-        cohort ct
+        aggregated_counts ac
     JOIN
-        drug_exposure de ON ct.subject_id = de.person_id
-        AND de.drug_exposure_start_date >= ct.cohort_start_date
-        AND (de.drug_exposure_start_date IS NULL OR de.drug_exposure_start_date <= ct.cohort_end_date)
-    JOIN
-        concept c ON de.drug_concept_id = c.concept_id
-    WHERE ct.cohort_definition_id = {cid}    
-    GROUP BY
-        c.concept_id, c.concept_name
+        concept c 
+        ON ac.concept_id = c.concept_id
     ORDER BY 
         prevalence DESC;
 '''
