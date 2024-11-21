@@ -218,32 +218,37 @@ class BiasDatabase:
             print(f"Error computing cohort {variable} distributions: {e}")
             return None
 
-    def get_cohort_concept_stats(self, cohort_definition_id: int, filter_count=0):
+    def get_cohort_concept_stats(self, cohort_definition_id: int,
+                                 concept_type='condition_occurrence', filter_count=0):
         """
         Get concept statistics for a cohort from the cohort table.
         """
         concept_stats = {}
+        if concept_type not in self.__class__.cohort_concept_queries:
+            print(f"input {concept_type} is not a valid concept type. "
+                  f"Supported concept types are: {self.__class__.cohort_concept_queries.keys()}")
+            return concept_stats
         try:
             if self._create_omop_table('concept') and self._create_omop_table('concept_ancestor'):
-                for key, query_str in self.__class__.cohort_concept_queries.items():
-                    if self._create_omop_table(key):
-                        query = query_str.format(cid=cohort_definition_id, filter_count=filter_count)
-                        concept_stats[key] = self._execute_query(query)
-                        cs_df = pd.DataFrame(concept_stats[key])
-                        # Combine concept_name and prevalence into a "details" column
-                        cs_df["details"] = cs_df.apply(
-                            lambda row: f"{row['concept_name']} (Prevalence: {row['prevalence']:.2%})", axis=1)
-                        filter_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
-                        hierarchy = build_concept_hierarchy(filter_df)
-                        roots = find_roots(filter_df)
-                        print(f'cohort concept hierarchy for {key}:')
-                        for root in roots:
-                            print(cs_df[(cs_df['ancestor_concept_id'] == root) &
-                                        (cs_df['descendant_concept_id'] == root)].iloc[0]['details'])
-                            print_hierarchy(hierarchy, parent=root, level=1)
-                    else:
-                        print(f"Cannot connect to the OMOP database to query {key} table")
-                        return concept_stats
+                query_str = self.__class__.cohort_concept_queries[concept_type]
+                if self._create_omop_table(concept_type):
+                    query = query_str.format(cid=cohort_definition_id, filter_count=filter_count)
+                    concept_stats[concept_type] = self._execute_query(query)
+                    cs_df = pd.DataFrame(concept_stats[concept_type])
+                    # Combine concept_name and prevalence into a "details" column
+                    cs_df["details"] = cs_df.apply(
+                        lambda row: f"{row['concept_name']} (Prevalence: {row['prevalence']:.2%})", axis=1)
+                    filter_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
+                    hierarchy = build_concept_hierarchy(filter_df)
+                    roots = find_roots(filter_df)
+                    print(f'cohort concept hierarchy for {concept_type}:')
+                    for root in roots:
+                        print(cs_df[(cs_df['ancestor_concept_id'] == root) &
+                                    (cs_df['descendant_concept_id'] == root)].iloc[0]['details'])
+                        print_hierarchy(hierarchy, parent=root, level=1)
+                else:
+                    print(f"Cannot connect to the OMOP database to query {concept_type} table")
+                    return concept_stats
             else:
                 print("Cannot connect to the OMOP database to query concept table")
                 return concept_stats
