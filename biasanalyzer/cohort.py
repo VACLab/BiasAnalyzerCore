@@ -44,11 +44,13 @@ class CohortData:
         """
         return self.bias_db.get_cohort_distributions(self.cohort_id, variable)
 
-    def get_concept_stats(self):
+    def get_concept_stats(self, filter_count=0):
         """
         Get cohort concept statistics such as concept prevalence
         """
-        return self.bias_db.get_cohort_concept_stats(self.cohort_id)
+        cohort_stats = self.bias_db.get_cohort_concept_stats(self.cohort_id, filter_count=filter_count)
+        return cohort_stats
+
 
     def __del__(self):
         self._cohort_data = None
