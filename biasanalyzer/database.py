@@ -1,4 +1,5 @@
 import duckdb
+import pandas as pd
 from typing import Optional
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
@@ -6,6 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
 from biasanalyzer.models import Cohort, CohortDefinition
 from biasanalyzer.sql import *
+from biasanalyzer.utils import build_concept_hierarchy, print_hierarchy, find_roots
+
 
 class BiasDatabase:
     distribution_queries = {
@@ -61,6 +64,9 @@ class BiasDatabase:
                 PRIMARY KEY (cohort_definition_id, subject_id),
                 FOREIGN KEY (cohort_definition_id) REFERENCES cohort_definition(id)
             )
+        ''')
+        self.conn.execute('''
+            CREATE INDEX idx_cohort_dates ON cohort (cohort_definition_id, cohort_start_date, cohort_end_date);
         ''')
         print("Cohort table created.")
 
@@ -212,7 +218,7 @@ class BiasDatabase:
             print(f"Error computing cohort {variable} distributions: {e}")
             return None
 
-    def get_cohort_concept_stats(self, cohort_definition_id: int):
+    def get_cohort_concept_stats(self, cohort_definition_id: int, filter_count=0):
         """
         Get concept statistics for a cohort from the cohort table.
         """
@@ -221,8 +227,20 @@ class BiasDatabase:
             if self._create_omop_table('concept') and self._create_omop_table('concept_ancestor'):
                 for key, query_str in self.__class__.cohort_concept_queries.items():
                     if self._create_omop_table(key):
-                        query = query_str.format(cid=cohort_definition_id)
+                        query = query_str.format(cid=cohort_definition_id, filter_count=filter_count)
                         concept_stats[key] = self._execute_query(query)
+                        cs_df = pd.DataFrame(concept_stats[key])
+                        # Combine concept_name and prevalence into a "details" column
+                        cs_df["details"] = cs_df.apply(
+                            lambda row: f"{row['concept_name']} (Prevalence: {row['prevalence']:.2%})", axis=1)
+                        filter_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
+                        hierarchy = build_concept_hierarchy(filter_df)
+                        roots = find_roots(filter_df)
+                        print(f'cohort concept hierarchy for {key}:')
+                        for root in roots:
+                            print(cs_df[(cs_df['ancestor_concept_id'] == root) &
+                                        (cs_df['descendant_concept_id'] == root)].iloc[0]['details'])
+                            print_hierarchy(hierarchy, parent=root, level=1)
                     else:
                         print(f"Cannot connect to the OMOP database to query {key} table")
                         return concept_stats

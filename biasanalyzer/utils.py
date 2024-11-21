@@ -17,3 +17,40 @@ def hellinger_distance(p, q):
     q = q / np.sum(q)
 
     return np.sqrt(0.5 * np.sum((np.sqrt(p) - np.sqrt(q)) ** 2))
+
+
+def build_concept_hierarchy(df, parent_col="ancestor_concept_id", child_col="descendant_concept_id",
+                            details_col="details"):
+    """
+    Builds a hierarchy using only direct parent-child relationships to remove duplicate branches.
+    """
+    if "min_levels_of_separation" in df.columns:
+        df = df[df["min_levels_of_separation"] == 1]
+    grouped = df.groupby(parent_col)
+    hierarchy = {
+        parent: list(zip(group[child_col], group[details_col]))
+        for parent, group in grouped
+    }
+    return hierarchy
+
+
+def find_roots(df, parent_col="ancestor_concept_id", child_col="descendant_concept_id"):
+    """
+    Finds root nodes in the hierarchy. Roots are nodes that are parents
+    but never appear as children.
+    """
+    # Get unique parent and child IDs
+    parents = set(df[parent_col].dropna())  # Exclude None values
+    children = set(df[child_col])
+    # Roots are parents that are not children
+    roots = parents - children
+    return list(roots)
+
+
+def print_hierarchy(hierarchy, parent=None, level=0):
+    # Print the hierarchy in an indented format
+    if parent not in hierarchy:
+        return
+    for child, details in hierarchy[parent]:
+        print(f"  " * level + details)
+        print_hierarchy(hierarchy, parent=child, level=level + 1)

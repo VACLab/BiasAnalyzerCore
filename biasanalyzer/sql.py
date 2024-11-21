@@ -158,27 +158,49 @@ COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
             concept_ancestor ca 
             ON cc.concept_id = ca.descendant_concept_id
         WHERE 
-            ca.min_levels_of_separation >= 0 -- Ensure valid ancestor relationships
+            ca.min_levels_of_separation >= 0
         GROUP BY
             ca.ancestor_concept_id
+    ),
+    concept_hierarchy AS (
+        -- Retrieve the hierarchy for all concepts involved
+        SELECT
+            ca.ancestor_concept_id,
+            ca.descendant_concept_id,
+            ca.min_levels_of_separation
+        FROM
+            concept_ancestor ca
+        WHERE 
+            ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
+            AND ca.ancestor_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
+    ),
+    final_data AS (
+        -- Combine counts and hierarchy with concept details
+        SELECT
+            c.concept_name,
+            ac.count_in_cohort,
+            (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
+            ch.ancestor_concept_id,
+            ch.descendant_concept_id,
+            ch.min_levels_of_separation
+        FROM
+            aggregated_counts ac
+        JOIN
+            concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
+        JOIN
+            concept c ON ac.concept_id = c.concept_id
+        WHERE ac.count_in_cohort > {filter_count} 
     )
-    -- Combine individual and aggregated counts with concept details
     SELECT
-        c.concept_id,
-        c.concept_name,
-        ac.count_in_cohort,
-        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence
+        *
     FROM
-        aggregated_counts ac
-    JOIN
-        concept c 
-        ON ac.concept_id = c.concept_id
+        final_data
     ORDER BY 
         prevalence DESC;
 '''
 COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
     WITH cohort_drugs AS (
-        -- Compute the counts for each condition node
+        -- Compute the counts for each drug node
         SELECT
             de.drug_concept_id AS concept_id,
             ct.subject_id
@@ -204,18 +226,40 @@ COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
             ca.min_levels_of_separation >= 0 -- Ensure valid ancestor relationships
         GROUP BY
             ca.ancestor_concept_id
+    ),
+    concept_hierarchy AS (
+        -- Retrieve the hierarchy for all concepts involved
+        SELECT
+            ca.ancestor_concept_id,
+            ca.descendant_concept_id,
+            ca.min_levels_of_separation
+        FROM
+            concept_ancestor ca
+        WHERE
+            ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
+            AND ca.ancestor_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
+    ),
+    final_data AS (
+        -- Combine counts and hierarchy with concept details
+        SELECT
+            c.concept_name,
+            ac.count_in_cohort,
+            (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
+            ch.ancestor_concept_id,
+            ch.descendant_concept_id,
+            ch.min_levels_of_separation
+        FROM
+            aggregated_counts ac
+        JOIN
+            concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
+        JOIN
+            concept c ON ac.concept_id = c.concept_id
+        WHERE ac.count_in_cohort > {filter_count}
     )
-    -- Combine individual and aggregated counts with concept details
     SELECT
-        c.concept_id,
-        c.concept_name,
-        ac.count_in_cohort,
-        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence
+        *
     FROM
-        aggregated_counts ac
-    JOIN
-        concept c 
-        ON ac.concept_id = c.concept_id
-    ORDER BY 
+        final_data
+    ORDER BY
         prevalence DESC;
 '''
