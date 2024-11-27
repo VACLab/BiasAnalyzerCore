@@ -22,8 +22,14 @@ class BiasDatabase:
         "ethnicity": ETHNICITY_STATS_QUERY
     }
     cohort_concept_queries = {
-        'condition_occurrence': COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY,
-        'drug_exposure': COHORT_CONCEPT_DRUG_PREVALENCE_QUERY
+        'condition_occurrence': {
+            'query': COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY,
+            'default_vocab': 'SNOMED'
+        },
+        'drug_exposure': {
+            'query': COHORT_CONCEPT_DRUG_PREVALENCE_QUERY,
+            'default_vocab': 'RxNorm'
+        }
     }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
@@ -136,6 +142,7 @@ class BiasDatabase:
 
     def _execute_query(self, query_str):
         results = self.conn.execute(query_str)
+
         headers = [desc[0] for desc in results.description]
         rows = results.fetchall()
         if len(rows) == 0:
@@ -219,7 +226,7 @@ class BiasDatabase:
             return None
 
     def get_cohort_concept_stats(self, cohort_definition_id: int,
-                                 concept_type='condition_occurrence', filter_count=0):
+                                 concept_type='condition_occurrence', filter_count=0, vocab=None):
         """
         Get concept statistics for a cohort from the cohort table.
         """
@@ -230,21 +237,21 @@ class BiasDatabase:
             return concept_stats
         try:
             if self._create_omop_table('concept') and self._create_omop_table('concept_ancestor'):
-                query_str = self.__class__.cohort_concept_queries[concept_type]
+                query_str = self.__class__.cohort_concept_queries[concept_type]['query']
                 if self._create_omop_table(concept_type):
-                    query = query_str.format(cid=cohort_definition_id, filter_count=filter_count)
+                    if not vocab:
+                        vocab = self.__class__.cohort_concept_queries[concept_type]['default_vocab']
+                    query = query_str.format(cid=cohort_definition_id, filter_count=filter_count,
+                                             vocab=vocab)
                     concept_stats[concept_type] = self._execute_query(query)
                     cs_df = pd.DataFrame(concept_stats[concept_type])
                     # Combine concept_name and prevalence into a "details" column
                     cs_df["details"] = cs_df.apply(
-                        lambda row: f"{row['concept_name']} (Prevalence: {row['prevalence']:.2%})", axis=1)
-                    filter_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
-                    hierarchy = build_concept_hierarchy(filter_df)
-                    roots = find_roots(filter_df)
-                    print(f'cohort concept hierarchy for {concept_type}:')
+                        lambda row: f"{row['concept_name']} (Prevalence: {row['prevalence']:.3%})", axis=1)
+                    hierarchy = build_concept_hierarchy(cs_df)
+                    roots = find_roots(cs_df)
+                    print(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
                     for root in roots:
-                        print(cs_df[(cs_df['ancestor_concept_id'] == root) &
-                                    (cs_df['descendant_concept_id'] == root)].iloc[0]['details'])
                         print_hierarchy(hierarchy, parent=root, level=1)
                 else:
                     print(f"Cannot connect to the OMOP database to query {concept_type} table")

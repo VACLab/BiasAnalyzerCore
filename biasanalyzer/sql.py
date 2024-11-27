@@ -145,7 +145,7 @@ COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
             condition_occurrence co ON ct.subject_id = co.person_id
             AND co.condition_start_date >= ct.cohort_start_date
             AND (co.condition_end_date IS NULL OR co.condition_start_date <= ct.cohort_end_date)
-        WHERE ct.cohort_definition_id = {cid}       
+        WHERE ct.cohort_definition_id = {cid}   
     ),
     aggregated_counts AS (
         -- Aggregate counts for parent nodes using the concept_ancestor table
@@ -163,38 +163,32 @@ COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
             ca.ancestor_concept_id
     ),
     concept_hierarchy AS (
-        -- Retrieve the hierarchy for all concepts involved
+        -- Retrieve the direct parent-child hierarchy for all concepts involved
         SELECT
             ca.ancestor_concept_id,
             ca.descendant_concept_id,
-            ca.min_levels_of_separation
         FROM
             concept_ancestor ca
-        WHERE 
-            ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
+        WHERE
+            ca.min_levels_of_separation = 1 
+            AND ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
             AND ca.ancestor_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
-    ),
-    final_data AS (
-        -- Combine counts and hierarchy with concept details
-        SELECT
-            c.concept_name,
-            ac.count_in_cohort,
-            (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
-            ch.ancestor_concept_id,
-            ch.descendant_concept_id,
-            ch.min_levels_of_separation
-        FROM
-            aggregated_counts ac
-        JOIN
-            concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
-        JOIN
-            concept c ON ac.concept_id = c.concept_id
-        WHERE ac.count_in_cohort > {filter_count} 
     )
-    SELECT
-        *
+    -- Combine counts and hierarchy with concept details
+    SELECT DISTINCT
+        c.concept_name,
+        c.concept_code,
+        ac.count_in_cohort,
+        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
+        ch.ancestor_concept_id,
+        ch.descendant_concept_id
     FROM
-        final_data
+        aggregated_counts ac
+    JOIN
+        concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
+    JOIN
+        concept c ON ac.concept_id = c.concept_id
+    WHERE ac.count_in_cohort > {filter_count} 
     ORDER BY 
         prevalence DESC;
 '''
@@ -222,7 +216,10 @@ COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
         JOIN
             concept_ancestor ca 
             ON cd.concept_id = ca.descendant_concept_id
-        WHERE 
+        JOIN
+            concept anc ON ca.ancestor_concept_id = anc.concept_id    
+        WHERE
+            anc.vocabulary_id = '{vocab}' AND 
             ca.min_levels_of_separation >= 0 -- Ensure valid ancestor relationships
         GROUP BY
             ca.ancestor_concept_id
@@ -231,35 +228,29 @@ COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
         -- Retrieve the hierarchy for all concepts involved
         SELECT
             ca.ancestor_concept_id,
-            ca.descendant_concept_id,
-            ca.min_levels_of_separation
+            ca.descendant_concept_id
         FROM
             concept_ancestor ca
         WHERE
-            ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
+            ca.min_levels_of_separation = 1
+            AND ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
             AND ca.ancestor_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
-    ),
-    final_data AS (
-        -- Combine counts and hierarchy with concept details
-        SELECT
-            c.concept_name,
-            ac.count_in_cohort,
-            (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
-            ch.ancestor_concept_id,
-            ch.descendant_concept_id,
-            ch.min_levels_of_separation
-        FROM
-            aggregated_counts ac
-        JOIN
-            concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
-        JOIN
-            concept c ON ac.concept_id = c.concept_id
-        WHERE ac.count_in_cohort > {filter_count}
     )
-    SELECT
-        *
+    -- Combine counts and hierarchy with concept details
+    SELECT DISTINCT
+        c.concept_name,
+        c.concept_code,
+        ac.count_in_cohort,
+        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
+        ch.ancestor_concept_id,
+        ch.descendant_concept_id
     FROM
-        final_data
-    ORDER BY
+        aggregated_counts ac
+    JOIN
+        concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
+    JOIN
+        concept c ON ac.concept_id = c.concept_id
+    WHERE ac.count_in_cohort > {filter_count} 
+    ORDER BY 
         prevalence DESC;
 '''

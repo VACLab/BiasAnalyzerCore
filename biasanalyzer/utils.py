@@ -24,8 +24,6 @@ def build_concept_hierarchy(df, parent_col="ancestor_concept_id", child_col="des
     """
     Builds a hierarchy using only direct parent-child relationships to remove duplicate branches.
     """
-    if "min_levels_of_separation" in df.columns:
-        df = df[df["min_levels_of_separation"] == 1]
     grouped = df.groupby(parent_col)
     hierarchy = {
         parent: list(zip(group[child_col], group[details_col]))
