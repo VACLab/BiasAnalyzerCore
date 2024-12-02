@@ -34,19 +34,25 @@ class BiasDatabase:
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(BiasDatabase, cls).__new__(cls, *args, **kwargs)
-            cls._instance._initialize()  # Initialize only once
+            cls._instance = super(BiasDatabase, cls).__new__(cls)
+            cls._instance._initialize(*args, **kwargs)  # Initialize only once
         return cls._instance
 
-    def _initialize(self):
+    def _initialize(self, db_url):
         # by default, duckdb uses in memory database
-        self.conn = duckdb.connect(':memory:')
+        self.conn = duckdb.connect(db_url)
         self.omop_cdm_db_url = None
         self._create_cohort_definition_table()
         self._create_cohort_table()
 
     def _create_cohort_definition_table(self):
-        self.conn.execute('CREATE SEQUENCE id_sequence START 1')
+        try:
+            self.conn.execute('CREATE SEQUENCE id_sequence START 1')
+        except duckdb.Error as e:
+            if "already exists" in str(e).lower():
+                print("Sequence already exists, skipping creation.")
+            else:
+                raise
         self.conn.execute('''
             CREATE TABLE IF NOT EXISTS cohort_definition (
                       id INTEGER DEFAULT nextval('id_sequence'), 
@@ -67,13 +73,18 @@ class BiasDatabase:
                 cohort_definition_id INTEGER,
                 cohort_start_date DATE,
                 cohort_end_date DATE,
-                PRIMARY KEY (cohort_definition_id, subject_id),
                 FOREIGN KEY (cohort_definition_id) REFERENCES cohort_definition(id)
             )
         ''')
-        self.conn.execute('''
-            CREATE INDEX idx_cohort_dates ON cohort (cohort_definition_id, cohort_start_date, cohort_end_date);
-        ''')
+        try:
+            self.conn.execute('''
+                CREATE INDEX idx_cohort_dates ON cohort (cohort_definition_id, cohort_start_date, cohort_end_date);
+            ''')
+        except duckdb.Error as e:
+            if "already exists" in str(e).lower():
+                print("Index already exists, skipping creation.")
+            else:
+                raise
         print("Cohort table created.")
 
     def load_postgres_extension(self):
@@ -130,13 +141,15 @@ class BiasDatabase:
         return [dict(zip(headers, row)) for row in rows]
 
     def _create_omop_table(self, table_name):
-        if self.omop_cdm_db_url is not None:
+        if self.omop_cdm_db_url is not None and not self.omop_cdm_db_url.endswith('.duckdb'):
             # need to create person table from OMOP CDM postgreSQL database
             self.conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table_name} AS 
                 SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', {table_name})
             """)
             return True # success
+        elif self.omop_cdm_db_url.endswith('.duckdb'):
+            return True
         else:
             return False # failure
 
@@ -271,6 +284,7 @@ class BiasDatabase:
 
 class OMOPCDMDatabase:
     _instance = None  # indicating a singleton with only one instance of the class ever created
+    _database_type = None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(OMOPCDMDatabase, cls).__new__(cls)
@@ -278,6 +292,15 @@ class OMOPCDMDatabase:
         return cls._instance
 
     def _initialize(self, db_url):
+        if db_url.endswith('.duckdb'):
+            # Handle DuckDB connection
+            try:
+                self.engine = duckdb.connect(db_url)
+                print(f"Connected to the DuckDB database: {db_url}.")
+            except duckdb.Error as e:
+                print(f"Failed to connect to DuckDB: {e}")
+            self.Session = self.engine  # Use engine directly for DuckDB
+            self._database_type = 'duckdb'
         try:
             self.engine = create_engine(
                 db_url,
@@ -286,37 +309,47 @@ class OMOPCDMDatabase:
             )
             self.Session = sessionmaker(bind=self.engine)
             print("Connected to the OMOP CDM database (read-only).")
+            self._database_type = 'postgresql'
         except SQLAlchemyError as e:
             print(f"Failed to connect to the database: {e}")
 
     def get_session(self):
-        # Provide a new session for read-only queries
-        return self.Session()
+        if self._database_type == 'duckdb':
+            return self.engine
+        else: # postgresql connection
+            # Provide a new session for read-only queries
+            return self.Session()
 
     def execute_query(self, query, params=None):
-        omop_session = self.get_session()
         try:
-            if params:
-                results = omop_session.execute(query, params)
+            if self._database_type == 'duckdb':
+                # DuckDB query execution
+                results = self.engine.execute(query, params).fetchall()
+                headers = [desc[0] for desc in self.engine.execute(query, params).description]
             else:
-                results = omop_session.execute(query)
-            headers = results.keys()
-            return_result = []
-            for row in results:
-                return_result.append(dict(zip(headers, row)))
-            omop_session.close()
-            return return_result
+                # PostgreSQL query execution
+                omop_session = self.get_session()
+                query = text(query)
+                results = omop_session.execute(query, params) if params else omop_session.execute(query)
+                headers = results.keys()
+                results = results.fetchall()
+                omop_session.close()
+
+            return [dict(zip(headers, row)) for row in results]
+
+        except duckdb.Error as e:
+            print(f"Error executing query: {e}")
+            return []
         except SQLAlchemyError as e:
             print(f"Error executing query: {e}")
             omop_session.close()
             return []
 
-
     def get_domains_and_vocabularies(self) -> list:
         # find a concept ID based on a search term
-        query = text("""
+        query = """
                     SELECT distinct domain_id, vocabulary_id FROM concept order by domain_id, vocabulary_id
-                    """)
+                """
         return self.execute_query(query)
 
     def get_concepts(self, search_term: str, domain: Optional[str], vocab: Optional[str]) -> list:
@@ -343,14 +376,14 @@ class OMOPCDMDatabase:
             condition_str = "domain_id = :domain"
             param_set['domain'] = domain
 
-        query = text(f"""
+        query = f"""
         SELECT concept_id, concept_name, valid_start_date, valid_end_date, domain_id, vocabulary_id FROM concept 
         where {condition_str} and 
         (LOWER(concept_name) = :search_term_exact or LOWER(concept_name) LIKE '%' || :search_term_prefix
         or LOWER(concept_name) LIKE :search_term_suffix || '%'
         or LOWER(concept_name) LIKE '%' || :search_term_prefix_suffix || '%')
         ORDER BY concept_id
-        """)
+        """
 
         return self.execute_query(query, params=param_set)
 
@@ -359,7 +392,7 @@ class OMOPCDMDatabase:
         Retrieves the full concept hierarchy (ancestors and descendants) for a given concept_id
         and organizes it into a nested dictionary to represent the tree structure.
         """
-        query = text("""
+        query = """
                 WITH RECURSIVE concept_hierarchy AS (
                     SELECT ancestor_concept_id, descendant_concept_id, min_levels_of_separation
                     FROM concept_ancestor
@@ -374,7 +407,7 @@ class OMOPCDMDatabase:
                 SELECT ancestor_concept_id, descendant_concept_id
                 FROM concept_hierarchy
                 WHERE min_levels_of_separation > 0
-                """)
+                """
 
         results = self.execute_query(query, params={"concept_id": concept_id})
 
@@ -387,11 +420,11 @@ class OMOPCDMDatabase:
         # Fetch details of each concept
         concept_details = {}
         if concept_ids:
-            query = text("""
+            query = """
                     SELECT concept_id, concept_name, vocabulary_id, concept_code
                     FROM concept
                     WHERE concept_id IN :concept_ids
-                    """)
+                    """
 
             result = self.execute_query(query, params={"concept_ids": tuple(concept_ids)})
             concept_details = {row['concept_id']: row for row in result}
@@ -422,7 +455,9 @@ class OMOPCDMDatabase:
 
 
     def close(self):
-        # Dispose of the connection (if needed)
-        self.engine.dispose()
+        if isinstance(self.engine, duckdb.DuckDBPyConnection):
+            self.engine.close()
+        else:
+            self.engine.dispose()
         OMOPCDMDatabase._instance = None
         print("Connection to the OMOP CDM database closed.")
