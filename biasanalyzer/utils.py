@@ -45,10 +45,13 @@ def find_roots(df, parent_col="ancestor_concept_id", child_col="descendant_conce
     return list(roots)
 
 
-def print_hierarchy(hierarchy, parent=None, level=0):
+def print_hierarchy(hierarchy, parent=None, level=0, parent_details=None):
     # Print the hierarchy in an indented format
     if parent not in hierarchy:
         return
+    if level == 0 and parent_details is not None:
+        print(parent_details)
+        level += 1
     for child, details in hierarchy[parent]:
         print(f"  " * level + details)
         print_hierarchy(hierarchy, parent=child, level=level + 1)

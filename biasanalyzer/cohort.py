@@ -1,5 +1,5 @@
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import text
+import duckdb
 from datetime import datetime
 from biasanalyzer.models import CohortDefinition, Cohort
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
@@ -73,9 +73,8 @@ class CohortAction:
         """
         omop_session = self.omop_db.get_session()
         try:
-            query = text(query)
             # Execute read-only query from OMOP CDM database
-            result = omop_session.execute(query).mappings().fetchall()
+            result = self.omop_db.execute_query(query)
             # Create CohortDefinition
             cohort_def = CohortDefinition(
                 name=cohort_name,
@@ -98,6 +97,8 @@ class CohortAction:
             print(f"Cohort {cohort_name} successfully created.")
             omop_session.close()
             return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
+        except duckdb.Error as e:
+            print(f"Error executing query: {e}")
         except SQLAlchemyError as e:
             print(f"Error executing query: {e}")
             omop_session.close()

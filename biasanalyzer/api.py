@@ -13,7 +13,7 @@ class BIAS:
 
     def __init__(self):
         self.config = {}
-        self.bias_db = BiasDatabase()
+        self.bias_db = None
         self.omop_cdm_db = None
         self.cohort_action = None
 
@@ -43,17 +43,28 @@ class BIAS:
             print('no valid configuration to set root OMOP CDM data. '
                   'Call set_config(config_file_path) to specify configurations first.')
         elif 'root_omop_cdm_database' in self.config:
-            user = self.config['root_omop_cdm_database']['username']
-            password = self.config['root_omop_cdm_database']['password']
-            host = self.config['root_omop_cdm_database']['hostname']
-            port = self.config['root_omop_cdm_database']['port']
-            db = self.config['root_omop_cdm_database']['database']
-            db_url = f"postgresql://{user}:{password}@{host}:{port}/{db}"
-            self.omop_cdm_db = OMOPCDMDatabase(db_url)
-            # load postgres extension in duckdb bias_db so that cohorts in duckdb can be joined
-            # with OMOP CDM tables in omop_cdm_db
-            self.bias_db.load_postgres_extension()
-            self.bias_db.omop_cdm_db_url = db_url
+            db_type = self.config['root_omop_cdm_database']['database_type']
+            if db_type == 'postgresql':
+                user = self.config['root_omop_cdm_database']['username']
+                password = self.config['root_omop_cdm_database']['password']
+                host = self.config['root_omop_cdm_database']['hostname']
+                port = self.config['root_omop_cdm_database']['port']
+                db = self.config['root_omop_cdm_database']['database']
+                db_url = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+                self.omop_cdm_db = OMOPCDMDatabase(db_url)
+                self.bias_db = BiasDatabase(':memory:')
+                # load postgres extension in duckdb bias_db so that cohorts in duckdb can be joined
+                # with OMOP CDM tables in omop_cdm_db
+                self.bias_db.load_postgres_extension()
+                self.bias_db.omop_cdm_db_url = db_url
+
+            elif db_type == 'duckdb':
+                db_path = self.config['root_omop_cdm_database'].get('database', ":memory:")
+                self.omop_cdm_db = OMOPCDMDatabase(db_path)
+                self.bias_db = BiasDatabase(db_path)
+                self.bias_db.omop_cdm_db_url = db_path
+            else:
+                print(f"Unsupported database type: {db_type}")
         else:
             print('Configuration file must include configuration values for root_omop_cdm_database key.')
 

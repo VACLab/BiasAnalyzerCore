@@ -1,10 +1,9 @@
 # example configuration for BiasAnalyzer
 
 root_omop_cdm_database:
+  database_type: duckdb   # set it to one of the two supported types: postgresql or duckdb
   username: test_username
   password: test_password
   hostname: test_db_hostname
-  database: test_db_name
+  database: "shared_test_db.duckdb"    # use ":memory:" for an in-memory duckdb or database name for postgresql
   port: 5432
-
-

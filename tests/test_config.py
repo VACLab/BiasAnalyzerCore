@@ -9,9 +9,10 @@ def test_load_config():
         assert False, f"load_config() raised an exception: {e}"
 
     assert config.get('root_omop_cdm_database') == {
+        'database_type': 'duckdb',
         'username': 'test_username',
         'password': 'test_password',
         'hostname': 'test_db_hostname',
-        'database': 'test_db_name',
+        'database': 'shared_test_db.duckdb',
         'port': 5432
     }
