@@ -1,0 +1,43 @@
+name: Run Tests
+
+on:
+  # Trigger workflow on pull requests to the main branch
+  pull_request:
+    branches:
+      - main
+  # Trigger workflow on push to the main branch
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Step 2: Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"  # Use your project’s Python version
+
+    # Step 3: Install Poetry
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    # Step 4: Install dependencies
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    # Step 5: Run Tests
+    - name: Run tests
+      run: |
+        poetry run pytest -s --cov=biasanalyzer
+
