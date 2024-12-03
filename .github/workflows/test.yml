@@ -34,7 +34,7 @@ jobs:
     # Step 4: Install dependencies
     - name: Install dependencies
       run: |
-        poetry install
+        poetry install --with dev
 
     # Step 5: Run Tests
     - name: Run tests
