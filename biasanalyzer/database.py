@@ -260,12 +260,17 @@ class BiasDatabase:
                     cs_df = pd.DataFrame(concept_stats[concept_type])
                     # Combine concept_name and prevalence into a "details" column
                     cs_df["details"] = cs_df.apply(
-                        lambda row: f"{row['concept_name']} (Prevalence: {row['prevalence']:.3%})", axis=1)
-                    hierarchy = build_concept_hierarchy(cs_df)
-                    roots = find_roots(cs_df)
+                        lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
+                                    f"Prevalence: {row['prevalence']:.3%})", axis=1)
+                    filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
+                    roots = find_roots(filtered_cs_df)
+                    hierarchy = build_concept_hierarchy(filtered_cs_df)
                     print(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
                     for root in roots:
-                        print_hierarchy(hierarchy, parent=root, level=1)
+                        root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
+                                  & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
+                        print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
+                    return concept_stats
                 else:
                     print(f"Cannot connect to the OMOP database to query {concept_type} table")
                     return concept_stats
@@ -274,7 +279,7 @@ class BiasDatabase:
                 return concept_stats
         except Exception as e:
             print(f"Error computing cohort concept stats: {e}")
-        return concept_stats
+            return concept_stats
 
     def close(self):
         self.conn.close()

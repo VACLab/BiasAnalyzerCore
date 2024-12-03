@@ -170,7 +170,7 @@ COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
         FROM
             concept_ancestor ca
         WHERE
-            ca.min_levels_of_separation = 1 
+            ca.min_levels_of_separation <= 1 
             AND ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
             AND ca.ancestor_concept_id IN (SELECT concept_id FROM aggregated_counts where count_in_cohort > {filter_count})
     )
@@ -179,7 +179,7 @@ COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
         c.concept_name,
         c.concept_code,
         ac.count_in_cohort,
-        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
+        (ac.count_in_cohort * 1.0 / (SELECT COUNT(DISTINCT subject_id) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
         ch.ancestor_concept_id,
         ch.descendant_concept_id
     FROM
@@ -241,7 +241,7 @@ COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
         c.concept_name,
         c.concept_code,
         ac.count_in_cohort,
-        (ac.count_in_cohort * 1.0 / (SELECT COUNT(*) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
+        (ac.count_in_cohort * 1.0 / (SELECT COUNT(DISTINCT subject_id) FROM cohort WHERE cohort_definition_id = {cid})) AS prevalence,
         ch.ancestor_concept_id,
         ch.descendant_concept_id
     FROM
