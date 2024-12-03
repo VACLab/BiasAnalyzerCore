@@ -1,4 +1,4 @@
-[![Test status via GitHub Actions](https://github.com/VACLab/BiasAnalyzer/workflows/test/badge.svg?branch=main&t=1)](https://github.com/VACLab/BiasAnalyzer/actions/workflows/test.yml)
+[![test](https://github.com/VACLab/BiasAnalyzer/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/VACLab/BiasAnalyzer/actions/workflows/test.yml)
 <h1>
   <img src="./assets/logo.png" alt="Project Logo" width="50" style="vertical-align: middle; margin-right: 10px;">
   BiasAnalyzer (BA)
