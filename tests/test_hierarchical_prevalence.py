@@ -9,6 +9,7 @@ def test_cohort_concept_hierarchical_prevalence(test_db):
         condition_end_date as cohort_end_date
         FROM condition_occurrence;
     """
+
     cohort = bias.create_cohort(
         cohort_name="Diabetes Cohort",
         cohort_desc="Cohort of patients with diabetes-related conditions",

@@ -5,5 +5,5 @@ root_omop_cdm_database:
   username: test_username
   password: test_password
   hostname: test_db_hostname
-  database: "shared_test_db.duckdb"    # use ":memory:" for an in-memory duckdb or database name for postgresql
+  database: "shared_test_db.duckdb"    # use a shared name for an in-memory duckdb or database name for postgresql
   port: 5432
