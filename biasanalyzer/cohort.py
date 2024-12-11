@@ -1,9 +1,23 @@
 from sqlalchemy.exc import SQLAlchemyError
 import duckdb
+import os
 from datetime import datetime
+from pydantic import ValidationError
+from jinja2 import Environment, FileSystemLoader
 from biasanalyzer.models import CohortDefinition, Cohort
+from biasanalyzer.config import load_cohort_creation_config
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
-from biasanalyzer.utils import hellinger_distance
+from biasanalyzer.utils import hellinger_distance, clean_string
+
+
+class CohortQueryBuilder:
+    def __init__(self):
+        template_path = os.path.join(os.path.dirname(__file__), "..", 'sql_templates')
+        self.env = Environment(loader=FileSystemLoader(template_path))
+
+    def build_query(self, template_name, **criteria):
+        template = self.env.get_template(f"{template_name}.sql")
+        return template.render(**criteria)
 
 
 class CohortData:
@@ -65,12 +79,33 @@ class CohortAction:
     def __init__(self, omop_db: OMOPCDMDatabase, bias_db: BiasDatabase):
         self.omop_db = omop_db
         self.bias_db = bias_db
+        self._query_builder = CohortQueryBuilder()
 
-    def create_cohort(self, cohort_name: str, description: str, query: str, created_by: str):
+    def create_cohort(self, cohort_name: str, description: str, query_or_yaml_file: str,
+                      created_by: str):
         """
         Create a new cohort by executing a query on OMOP CDM database
         and storing the result in BiasDatabase.
         """
+        if query_or_yaml_file.endswith('.yaml') or query_or_yaml_file.endswith('.yml'):
+            try:
+                cohort_config = load_cohort_creation_config(query_or_yaml_file)
+                print(f'configuration specified in {query_or_yaml_file} loaded successfully')
+            except FileNotFoundError:
+                print('specified cohort creation configuration file does not exist. Make sure '
+                      'the configuration file name with path is specified correctly.')
+                return None
+            except ValidationError as ex:
+                print(f'cohort creation configuration yaml file is not valid with '
+                      f'validation error: {ex}')
+                return None
+
+            template_name = cohort_config.get('template_name')
+            criteria = cohort_config.get('criteria', {})
+            query = self._query_builder.build_query(template_name, **criteria)
+        else:
+            query = clean_string(query_or_yaml_file)
+
         omop_session = self.omop_db.get_session()
         try:
             # Execute read-only query from OMOP CDM database
@@ -80,7 +115,7 @@ class CohortAction:
                 name=cohort_name,
                 description=description,
                 created_date=datetime.now().date(),
-                creation_info=str(query),
+                creation_info=clean_string(query),
                 created_by=created_by
             )
             cohort_def_id = self.bias_db.create_cohort_definition(cohort_def)
@@ -99,9 +134,11 @@ class CohortAction:
             return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
         except duckdb.Error as e:
             print(f"Error executing query: {e}")
+            return None
         except SQLAlchemyError as e:
             print(f"Error executing query: {e}")
             omop_session.close()
+            return None
 
     def compare_cohorts(self, cohort_id_1: int, cohort_id_2: int):
         """

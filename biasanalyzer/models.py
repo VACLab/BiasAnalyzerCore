@@ -1,4 +1,4 @@
-from pydantic import BaseModel, StrictStr, ConfigDict
+from pydantic import BaseModel, StrictStr, ConfigDict, Field
 from typing import Optional
 from datetime import date
 
@@ -32,3 +32,20 @@ class Cohort(BaseModel):
     subject_id: int
     cohort_start_date: date
     cohort_end_date: Optional[date]
+
+
+class CohortCriteria(BaseModel):
+    # SNOMED Condition concept ID in OMOP (e.g., 37311061 for COVID-19)
+    condition_concept_id: int
+    # Gender concept ID (e.g., 8532 for female)
+    gender_concept_id: Optional[int]
+    # Minimum birth year
+    min_birth_year: Optional[int]
+
+
+class CohortCreationConfig(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    # SQL query template name
+    template_name: str
+    # cohort creation criteria
+    criteria: CohortCriteria

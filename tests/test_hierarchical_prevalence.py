@@ -11,10 +11,10 @@ def test_cohort_concept_hierarchical_prevalence(test_db):
     """
 
     cohort = bias.create_cohort(
-        cohort_name="Diabetes Cohort",
-        cohort_desc="Cohort of patients with diabetes-related conditions",
-        query=cohort_query,
-        created_by="test_user"
+        "Diabetes Cohort",
+        "Cohort of patients with diabetes-related conditions",
+        cohort_query,
+        "test_user"
     )
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"

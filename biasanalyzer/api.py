@@ -159,15 +159,24 @@ class BIAS:
             return None
 
 
-    def create_cohort(self, cohort_name, cohort_desc, query, created_by):
+    def create_cohort(self, cohort_name, cohort_desc, query_or_yaml_file, created_by):
+        """
+        cohort_name: name of the cohort
+        cohort_desc: description of the cohort
+        query_or_yaml_file: a SQL query or YAML cohort creation file
+        created_by: name of the user that created the cohort
+        """
         c_action = self._set_cohort_action()
         if c_action:
-            created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query, created_by)
+            created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query_or_yaml_file,
+                                                    created_by)
             print('cohort created successfully')
             return created_cohort
         else:
             print('failed to create a valid cohort action object')
             return None
+
+
 
     def compare_cohorts(self, cohort_id1, cohort_id2):
         c_action = self._set_cohort_action()

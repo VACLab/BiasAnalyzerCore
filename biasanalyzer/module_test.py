@@ -1,6 +1,28 @@
 from biasanalyzer.api import BIAS
 import time
+import os
 import pandas as pd
+
+
+def cohort_creation_template_test(bias_obj):
+    cohort_data = bias_obj.create_cohort('COVID-19 patients', 'COVID-19 patients',
+                                         os.path.join(os.path.dirname(__file__), '..', 'tests',
+                                                      'assets', 'test_cohort_creation_config.yaml'),
+                                         'system')
+    if cohort_data:
+        md = cohort_data.metadata
+        print(f'cohort_definition: {md}')
+        print(f'The first five records in the cohort {cohort_data.data[:5]}')
+        print(f'the cohort stats: {cohort_data.get_stats()}')
+        print(f'the cohort age stats: {cohort_data.get_stats("age")}')
+        print(f'the cohort gender stats: {cohort_data.get_stats("gender")}')
+        print(f'the cohort race stats: {cohort_data.get_stats("race")}')
+        print(f'the cohort ethnicity stats: {cohort_data.get_stats("ethnicity")}')
+        print(f'the cohort age distributions: {cohort_data.get_distributions("age")}')
+        compare_stats = bias_obj.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
+        print(f'compare_stats: {compare_stats}')
+    return
+
 
 def condition_cohort_test(bias_obj):
     baseline_cohort_query = ('SELECT c.person_id, c.condition_start_date as cohort_start_date, '
@@ -30,7 +52,7 @@ def condition_cohort_test(bias_obj):
         print(f'the time taken to get cohort concept stats is {time.time() - t1}s')
         compare_stats = bias_obj.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
         print(f'compare_stats: {compare_stats}')
-    return cohort_data
+    return
 
 
 def concept_test(bias_obj):
@@ -63,9 +85,10 @@ if __name__ == '__main__':
     pd.set_option('display.width', 1000)
     try:
         bias = BIAS()
-        bias.set_config('/home/hongyi/BiasAnalyzer/config.yaml')
+        bias.set_config(os.path.join(os.path.dirname(__file__), '..', 'config.yaml'))
         bias.set_root_omop()
 
+        cohort_creation_template_test(bias)
         condition_cohort_test(bias)
         concept_test(bias)
     finally:
