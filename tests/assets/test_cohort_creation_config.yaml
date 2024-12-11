@@ -1,5 +1,0 @@
-template_name: "cohort_creation_query"
-criteria:
-  condition_concept_id: 37311061  # COVID-19
-  gender_concept_id: 8532         # Female
-  min_birth_year: 2000            # Born after 2000

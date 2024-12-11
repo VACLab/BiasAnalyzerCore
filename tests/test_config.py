@@ -19,14 +19,18 @@ def test_load_config():
 
 def test_load_cohort_creation_config():
     try:
-        config = load_cohort_creation_config(os.path.join(os.path.dirname(__file__), 'assets',
-                                                          'test_cohort_creation_config.yaml'))
+        config = load_cohort_creation_config(
+            os.path.join(os.path.dirname(__file__), 'assets',
+                         'test_cohort_creation_condition_occurrence_config.yaml'))
     except Exception as e:
         assert False, f"test_load_cohort_creation_config() raised an exception: {e}"
 
-    assert config.get('template_name') == 'cohort_creation_query'
-    assert config.get('criteria') == {
-        'condition_concept_id': 37311061,
-        'gender_concept_id': 8532,
-        'min_birth_year': 2000
-    }
+    assert config.get('template_name') == 'cohort_creation_condition_occurrence_query'
+    assert 'condition_occurrence' in config.get('criteria')
+    criteria = config.get('criteria')['condition_occurrence']
+    assert 'condition_concept_id' in criteria
+    assert 'gender_concept_id' in criteria
+    assert 'min_birth_year' in criteria
+    assert 'max_birth_year' in criteria
+    assert criteria['max_birth_year'] >= criteria['min_birth_year']
+
