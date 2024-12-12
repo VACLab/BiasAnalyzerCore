@@ -2,6 +2,6 @@ template_name: "cohort_creation_condition_occurrence_query"
 criteria:
   condition_occurrence:
     condition_concept_id: 37311061  # COVID-19, required field
-    gender_concept_id: 8532         # 8532 for Female and 8507 for male, optional field
+    gender: 'female'                # accepted values: female or male, optional field
     min_birth_year: 2000            # Born at the year of 2000 or after, optional field
     max_birth_year: 2020            # Born at the year of 2020 or before, optional field

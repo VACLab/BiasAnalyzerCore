@@ -29,8 +29,8 @@ def test_load_cohort_creation_config():
     assert 'condition_occurrence' in config.get('criteria')
     criteria = config.get('criteria')['condition_occurrence']
     assert 'condition_concept_id' in criteria
-    assert 'gender_concept_id' in criteria
+    assert 'gender' in criteria
     assert 'min_birth_year' in criteria
     assert 'max_birth_year' in criteria
     assert criteria['max_birth_year'] >= criteria['min_birth_year']
-
+    assert criteria['gender'] == 'female' or criteria['gender'] == 'male'

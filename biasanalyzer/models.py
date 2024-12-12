@@ -1,5 +1,5 @@
 from pydantic import BaseModel, StrictStr, ConfigDict, field_validator
-from typing import Optional
+from typing import Optional, Literal
 from datetime import date
 
 
@@ -42,8 +42,8 @@ class ConditionCriteria(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     # SNOMED Condition concept ID in OMOP (e.g., 37311061 for COVID-19)
     condition_concept_id: int
-    # Gender concept ID (e.g., 8532 for female)
-    gender_concept_id: Optional[int]
+    # Gender with "male" and "female" as valid input
+    gender: Optional[Literal['male', 'female']]
     # Minimum birth year
     min_birth_year: Optional[int]
     max_birth_year: Optional[int]
