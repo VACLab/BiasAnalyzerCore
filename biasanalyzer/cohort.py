@@ -85,7 +85,8 @@ class CohortAction:
                       created_by: str):
         """
         Create a new cohort by executing a query on OMOP CDM database
-        and storing the result in BiasDatabase.
+        and storing the result in BiasDatabase. The query can be passed in directly
+        or built from a yaml file using a corresponding SQL query template
         """
         if query_or_yaml_file.endswith('.yaml') or query_or_yaml_file.endswith('.yml'):
             try:
