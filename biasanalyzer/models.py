@@ -43,10 +43,10 @@ class ConditionCriteria(BaseModel):
     # SNOMED Condition concept ID in OMOP (e.g., 37311061 for COVID-19)
     condition_concept_id: int
     # Gender with "male" and "female" as valid input
-    gender: Optional[Literal['male', 'female']]
+    gender: Optional[Literal['male', 'female']] = None
     # Minimum birth year
-    min_birth_year: Optional[int]
-    max_birth_year: Optional[int]
+    min_birth_year: Optional[int] = None
+    max_birth_year: Optional[int] = None
 
     @field_validator("max_birth_year")
     def validate_birth_years(cls, max_birth_year, info):
@@ -65,5 +65,6 @@ class CohortCreationConfig(BaseModel):
     # SQL query template name
     template_name: str
     # cohort creation criteria
-    criteria: ConditionCohortCriteria
+    inclusion_criteria: ConditionCohortCriteria
+    exclusion_criteria: Optional[ConditionCohortCriteria] = None
 ###=========CohortCreationConfig==================###

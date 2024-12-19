@@ -1,7 +1,13 @@
 template_name: "cohort_creation_condition_occurrence_query"
-criteria:
+
+inclusion_criteria:
   condition_occurrence:
     condition_concept_id: 37311061  # COVID-19, required field
     gender: 'female'                # accepted values: female or male, optional field
     min_birth_year: 2000            # Born at the year of 2000 or after, optional field
     max_birth_year: 2020            # Born at the year of 2020 or before, optional field
+
+exclusion_criteria:
+  condition_occurrence:
+    condition_concept_id: 316139    # Exclude patients with heart failure
+    min_birth_year: 2003

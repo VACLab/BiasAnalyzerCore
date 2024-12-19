@@ -26,11 +26,17 @@ def test_load_cohort_creation_config():
         assert False, f"test_load_cohort_creation_config() raised an exception: {e}"
 
     assert config.get('template_name') == 'cohort_creation_condition_occurrence_query'
-    assert 'condition_occurrence' in config.get('criteria')
-    criteria = config.get('criteria')['condition_occurrence']
-    assert 'condition_concept_id' in criteria
-    assert 'gender' in criteria
-    assert 'min_birth_year' in criteria
-    assert 'max_birth_year' in criteria
-    assert criteria['max_birth_year'] >= criteria['min_birth_year']
-    assert criteria['gender'] == 'female' or criteria['gender'] == 'male'
+    assert 'condition_occurrence' in config.get('inclusion_criteria')
+    assert 'condition_occurrence' in config.get('exclusion_criteria')
+    in_criteria = config.get('inclusion_criteria')['condition_occurrence']
+    assert 'condition_concept_id' in in_criteria
+    assert 'gender' in in_criteria
+    assert 'min_birth_year' in in_criteria
+    assert 'max_birth_year' in in_criteria
+    assert in_criteria['max_birth_year'] >= in_criteria['min_birth_year']
+    assert in_criteria['gender'] == 'female' or in_criteria['gender'] == 'male'
+    ex_criteria = config.get('exclusion_criteria')['condition_occurrence']
+    assert 'condition_concept_id' in ex_criteria
+    assert 'min_birth_year' in ex_criteria
+    assert 'gender' not in ex_criteria
+    assert 'max_birth_year' not in ex_criteria

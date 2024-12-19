@@ -102,8 +102,11 @@ class CohortAction:
                 return None
 
             template_name = cohort_config.get('template_name')
-            criteria = cohort_config.get('criteria', {})
-            query = self._query_builder.build_query(template_name, **criteria)
+            in_criteria = cohort_config.get('inclusion_criteria')
+            ex_criteria = cohort_config.get('exclusion_criteria', {})
+            query = self._query_builder.build_query(template_name,
+                                                    inclusion_criteria=in_criteria,
+                                                    exclusion_criteria=ex_criteria)
         else:
             query = clean_string(query_or_yaml_file)
 
