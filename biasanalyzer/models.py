@@ -39,9 +39,10 @@ class Cohort(BaseModel):
 
 ###=========CohortCreationConfig==================###
 class ConditionCriteria(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     # SNOMED Condition concept ID in OMOP (e.g., 37311061 for COVID-19)
     condition_concept_id: int
+
+class DemographicsCriteria(BaseModel):
     # Gender with "male" and "female" as valid input
     gender: Optional[Literal['male', 'female']] = None
     # Minimum birth year
@@ -57,11 +58,10 @@ class ConditionCriteria(BaseModel):
         return max_birth_year
 
 class ConditionCohortCriteria(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     condition_occurrence: ConditionCriteria
+    demographics: Optional[DemographicsCriteria] = None  # Optional
 
 class CohortCreationConfig(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     # SQL query template name
     template_name: str
     # cohort creation criteria

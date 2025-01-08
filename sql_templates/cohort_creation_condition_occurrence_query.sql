@@ -4,16 +4,18 @@ SELECT c.person_id,
 FROM condition_occurrence c
 JOIN person p ON c.person_id = p.person_id
 WHERE c.condition_concept_id = {{ inclusion_criteria.condition_occurrence.condition_concept_id }}
-{% if inclusion_criteria.condition_occurrence.gender == 'female' %}
-  AND p.gender_concept_id = 8532
-{% elif inclusion_criteria.condition_occurrence.gender == 'male' %}
-  AND p.gender_concept_id = 8507
-{% endif %}
-{% if inclusion_criteria.condition_occurrence.min_birth_year %}
-  AND p.year_of_birth >= {{ inclusion_criteria.condition_occurrence.min_birth_year }}
-{% endif %}
-{% if inclusion_criteria.condition_occurrence.max_birth_year %}
-  AND p.year_of_birth <= {{ inclusion_criteria.condition_occurrence.max_birth_year }}
+{% if inclusion_criteria.demographics %}
+    {% if inclusion_criteria.demographics.gender == 'female' %}
+      AND p.gender_concept_id = 8532
+    {% elif inclusion_criteria.demographics.gender == 'male' %}
+      AND p.gender_concept_id = 8507
+    {% endif %}
+    {% if inclusion_criteria.demographics.min_birth_year %}
+      AND p.year_of_birth >= {{ inclusion_criteria.demographics.min_birth_year }}
+    {% endif %}
+    {% if inclusion_criteria.demographics.max_birth_year %}
+      AND p.year_of_birth <= {{ inclusion_criteria.demographics.max_birth_year }}
+    {% endif %}
 {% endif %}
 
 {% if exclusion_criteria %}
@@ -23,11 +25,13 @@ AND NOT EXISTS (
     JOIN person ep ON ex.person_id = ep.person_id
     WHERE   ex.person_id = c.person_id
             AND ex.condition_concept_id = {{ exclusion_criteria.condition_occurrence.condition_concept_id }}
-            {% if exclusion_criteria.condition_occurrence.min_birth_year %}
-            AND ep.year_of_birth >= {{ exclusion_criteria.condition_occurrence.min_birth_year }}
-            {% endif %}
-            {% if exclusion_criteria.condition_occurrence.max_birth_year %}
-            AND ep.year_of_birth <= {{ exclusion_criteria.condition_occurrence.max_birth_year }}
+            {% if exclusion_criteria.demographics %}
+                {% if exclusion_criteria.demographics.min_birth_year %}
+                AND ep.year_of_birth >= {{ exclusion_criteria.demographics.min_birth_year }}
+                {% endif %}
+                {% if exclusion_criteria.demographics.max_birth_year %}
+                AND ep.year_of_birth <= {{ exclusion_criteria.demographics.max_birth_year }}
+                {% endif %}
             {% endif %}
 )
 {% endif %}
