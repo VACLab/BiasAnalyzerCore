@@ -67,4 +67,9 @@ class CohortCreationConfig(BaseModel):
     # cohort creation criteria
     inclusion_criteria: ConditionCohortCriteria
     exclusion_criteria: Optional[ConditionCohortCriteria] = None
+
+class TemporalEventCriteria(BaseModel):
+    event_concept_id: int  # Required: Event concept ID
+    event_instance: Optional[int] = None  # Optional: Specific occurrence (e.g., 2nd hospitalization)
+    operator: Optional[Literal["AND", "OR", "NOT"]] = "AND"  # Default to AND if not specified
 ###=========CohortCreationConfig==================###

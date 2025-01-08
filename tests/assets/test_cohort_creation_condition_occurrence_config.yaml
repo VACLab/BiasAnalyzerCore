@@ -7,7 +7,13 @@ inclusion_criteria:
     gender: 'female'                # accepted values: female or male, optional field
     min_birth_year: 2000            # Born at the year of 2000 or after, optional field
     max_birth_year: 2020            # Born at the year of 2020 or before, optional field
-
+  temporal_events:
+    - event_concept_id: 9201        # inpatient visit
+      event_instance: 0             # how many times the event has happened
+      operator: "AND"               # Logical operator to combine with the next event
+    - event_concept_id: 9203        # Emergency Room visit
+      event_instance: 1             # how many times the event has happened
+      operator: "NOT"               # Exclude patients with this event
 exclusion_criteria:
   condition_occurrence:
     condition_concept_id: 316139    # Exclude patients with heart failure

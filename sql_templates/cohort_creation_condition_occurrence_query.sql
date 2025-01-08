@@ -18,6 +18,46 @@ WHERE c.condition_concept_id = {{ inclusion_criteria.condition_occurrence.condit
     {% endif %}
 {% endif %}
 
+    {% if inclusion_criteria.temporal_events %}
+    AND c.person_id IN (
+        {% for event in inclusion_criteria.temporal_events %}
+            {% if loop.index == 1 %}
+            SELECT person_id
+            FROM (
+                SELECT person_id,
+                       ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY visit_start_date ASC) AS event_instance
+                FROM visit_occurrence
+                WHERE visit_concept_id = {{ event.event_concept_id }}
+            ) seq
+            WHERE seq.event_instance = {{ event.event_instance }}
+            {% else %}
+            {% if event.operator == 'NOT' %}
+            AND NOT EXISTS (
+                SELECT person_id
+                FROM (
+                    SELECT person_id,
+                           ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY visit_start_date ASC) AS event_instance
+                    FROM visit_occurrence
+                    WHERE visit_concept_id = {{ event.event_concept_id }}
+                ) seq
+                WHERE seq.event_instance = {{ event.event_instance }}
+            )
+            {% else %}
+            {{ event.operator }}
+            SELECT person_id
+            FROM (
+                SELECT person_id,
+                       ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY visit_start_date ASC) AS event_instance
+                FROM visit_occurrence
+                WHERE visit_concept_id = {{ event.event_concept_id }}
+            ) seq
+            WHERE seq.event_instance = {{ event.event_instance }}
+            {% endif %}
+            {% endif %}
+        {% endfor %}
+    )
+{% endif %}
+
 {% if exclusion_criteria %}
 AND NOT EXISTS (
     SELECT 1
