@@ -1,5 +1,5 @@
 from pydantic import BaseModel, StrictStr, ConfigDict, field_validator
-from typing import Optional, Literal
+from typing import Optional, Literal, List, Union
 from datetime import date
 
 
@@ -57,9 +57,18 @@ class DemographicsCriteria(BaseModel):
                 raise ValueError("max_birth_year must be greater than or equal to min_birth_year")
         return max_birth_year
 
+class TemporalEventCriteria(BaseModel):
+    event_concept_id: int  # Required: Event concept ID
+    event_instance: Optional[int] = 1  # Optional: Specific occurrence (e.g., 2nd hospitalization)
+    operator: Optional[Literal["AND", "OR", "NOT"]] = "AND"  # Default to AND if not specified
+
+class TemporalEventOperator(BaseModel):
+    operator: Literal["AND", "OR", "NOT"]
+    events: List[Union[TemporalEventCriteria, "TemporalEventOperator"]]  # A list of events or nested operators
+
 class ConditionCohortCriteria(BaseModel):
-    condition_occurrence: ConditionCriteria
     demographics: Optional[DemographicsCriteria] = None  # Optional
+    temporal_events: Optional[List[TemporalEventOperator]] = None  # List of temporal event operators (AND, OR, NOT)
 
 class CohortCreationConfig(BaseModel):
     # SQL query template name
@@ -67,9 +76,4 @@ class CohortCreationConfig(BaseModel):
     # cohort creation criteria
     inclusion_criteria: ConditionCohortCriteria
     exclusion_criteria: Optional[ConditionCohortCriteria] = None
-
-class TemporalEventCriteria(BaseModel):
-    event_concept_id: int  # Required: Event concept ID
-    event_instance: Optional[int] = None  # Optional: Specific occurrence (e.g., 2nd hospitalization)
-    operator: Optional[Literal["AND", "OR", "NOT"]] = "AND"  # Default to AND if not specified
 ###=========CohortCreationConfig==================###

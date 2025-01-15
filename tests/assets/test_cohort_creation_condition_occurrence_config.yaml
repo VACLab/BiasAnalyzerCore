@@ -6,25 +6,25 @@ inclusion_criteria:
     min_birth_year: 2000            # Born at the year of 2000 or after, optional field
     max_birth_year: 2020            # Born at the year of 2020 or before, optional field
   temporal_events:
-    operator: 'OR'
-    events:
-      - operator: 'AND'
-        events:
-          - event_type: 'condition_occurrence'
-            condition_concept_id: 37311061 # COVID condition
+    - operator: 'OR'
+      events:
+        - operator: 'AND'
+          events:
+            - event_type: 'condition_occurrence'
+              event_concept_id: 37311061 # COVID condition
+            - event_type: 'visit_occurrence'
+              event_concept_id: 9201        # inpatient visit
+              event_instance: 1             # how many times the event has happened
+        - operator: 'NOT'
+          events:
           - event_type: 'visit_occurrence'
-            event_concept_id: 9201        # inpatient visit
+            event_concept_id: 9203        # Emergency Room visit
             event_instance: 1             # how many times the event has happened
-      - operator: 'NOT'
-        events:
-        - event_type: 'visit_occurrence'
-          event_concept_id: 9203        # Emergency Room visit
-          event_instance: 1             # how many times the event has happened
 exclusion_criteria:
   demographics:                     # Optional
     min_birth_year: 2003
   temporal_events:
-    operator: 'AND'
-    events:
+    - operator: 'AND'
+      events:
       - event_type: 'condition_occurrence'
-        condition_concept_id: 316139    # Exclude patients with heart failure
+        event_concept_id: 316139    # Exclude patients with heart failure

@@ -29,7 +29,7 @@ WHERE 1=1
                         SELECT person_id
                         FROM condition_occurrence
                         WHERE person_id = c.person_id
-                            AND condition_concept_id = {{ event.condition_concept_id }}
+                            AND condition_concept_id = {{ event.event_concept_id }}
                     {% if loop.last %}
                         )
                     {% endif %}
@@ -56,7 +56,7 @@ WHERE 1=1
                         SELECT person_id
                         FROM condition_occurrence
                         WHERE person_id = c.person_id
-                          AND condition_concept_id = {{ event.condition_concept_id }}
+                          AND condition_concept_id = {{ event.event_concept_id }}
                     {% if loop.last %}
                         )
                     {% endif %}
@@ -82,7 +82,7 @@ WHERE 1=1
                         FROM condition_occurrence ex
                         JOIN person ep ON ex.person_id = ep.person_id
                         WHERE ex.person_id = c.person_id
-                            AND ex.condition_concept_id = {{ event.condition_concept_id }}
+                            AND ex.condition_concept_id = {{ event.event_concept_id }}
                     )
                 {% elif event.event_type == 'visit_occurrence' %}
                     AND NOT EXISTS (
@@ -117,7 +117,7 @@ AND NOT EXISTS (
             {% if event_group.operator == 'AND' %}
                 {% for event in event_group.events %}
                     {% if event.event_type == 'condition_occurrence' %}
-                        AND ex.condition_concept_id = {{ event.condition_concept_id }}
+                        AND ex.condition_concept_id = {{ event.event_concept_id }}
                     {% elif event.event_type == 'visit_occurrence' %}
                         AND ex.visit_concept_id = {{ event.event_concept_id }}
                         AND ex.event_instance = {{ event.event_instance }}
@@ -126,7 +126,7 @@ AND NOT EXISTS (
             {% elif event_group.operator == 'OR' %}
                 {% for event in event_group.events %}
                     {% if event.event_type == 'condition_occurrence' %}
-                        AND ex.condition_concept_id = {{ event.condition_concept_id }}
+                        AND ex.condition_concept_id = {{ event.event_concept_id }}
                     {% elif event.event_type == 'visit_occurrence' %}
                         AND ex.visit_concept_id = {{ event.event_concept_id }}
                         AND ex.event_instance = {{ event.event_instance }}
@@ -139,7 +139,7 @@ AND NOT EXISTS (
                             SELECT 1
                             FROM condition_occurrence ex
                             WHERE ex.person_id = c.person_id
-                                AND ex.condition_concept_id = {{ event.condition_concept_id }}
+                                AND ex.condition_concept_id = {{ event.event_concept_id }}
                         )
                     {% elif event.event_type == 'visit_occurrence' %}
                         AND NOT EXISTS (
