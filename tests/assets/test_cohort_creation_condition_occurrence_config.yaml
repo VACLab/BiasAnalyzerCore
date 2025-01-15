@@ -12,7 +12,6 @@ inclusion_criteria:
         events:
           - event_type: 'condition_occurrence'
             condition_concept_id: 37311061 # COVID condition
-            event_instance: 1             # how many times the event has happened
           - event_type: 'visit_occurrence'
             event_concept_id: 9201        # inpatient visit
             event_instance: 1             # how many times the event has happened
@@ -29,4 +28,3 @@ exclusion_criteria:
     events:
       - event_type: 'condition_occurrence'
         condition_concept_id: 316139    # Exclude patients with heart failure
-        event_instance: 1             # how many times the event has happened
