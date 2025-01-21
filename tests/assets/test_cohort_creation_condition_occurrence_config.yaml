@@ -14,17 +14,19 @@ inclusion_criteria:
               event_concept_id: 37311061 # COVID condition
             - event_type: 'visit_occurrence'
               event_concept_id: 9201        # inpatient visit
-              event_instance: 1             # how many times the event has happened
-        - operator: 'NOT'
+              event_instance: 1             # how many times the event has happened; default is 1
+        - operator: 'BEFORE'
           events:
           - event_type: 'visit_occurrence'
             event_concept_id: 9203        # Emergency Room visit
-            event_instance: 1             # how many times the event has happened
+          - event_type: 'date'
+            timestamp: '2020-05-01'
 exclusion_criteria:
   demographics:                     # Optional
     min_birth_year: 2003
   temporal_events:
-    - operator: 'AND'
+    - operator: 'NOT'
       events:
-      - event_type: 'condition_occurrence'
-        event_concept_id: 316139    # Exclude patients with heart failure
+        - event_type: 'condition_occurrence'
+          event_concept_id: 316139    # Exclude patients with heart failure
+          event_instance: 1

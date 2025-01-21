@@ -1,4 +1,4 @@
-from pydantic import BaseModel, StrictStr, ConfigDict, field_validator
+from pydantic import BaseModel, StrictStr, ConfigDict, field_validator, model_validator
 from typing import Optional, Literal, List, Union
 from datetime import date
 
@@ -58,17 +58,43 @@ class DemographicsCriteria(BaseModel):
         return max_birth_year
 
 class TemporalEventCriteria(BaseModel):
-    event_concept_id: int  # Required: Event concept ID
+    event_type: Literal['condition_occurrence', 'visit_occurrence', 'date']
+    event_concept_id: Optional[int] = None  # Optional for 'date' event_type
     event_instance: Optional[int] = 1  # Optional: Specific occurrence (e.g., 2nd hospitalization)
-    operator: Optional[Literal["AND", "OR", "NOT"]] = "AND"  # Default to AND if not specified
+    timestamp: Optional[str] = None
+
+    @model_validator(mode="before")
+    def validate_event_type(cls, values):
+        event_type = values.get("event_type")
+        if event_type == "date" and not values.get("timestamp"):
+            raise ValueError("'date' event_type must have a 'timestamp'")
+        if event_type != "date" and not values.get("event_concept_id"):
+            raise ValueError(f"'{event_type}' requires an 'event_concept_id'")
+        return values
 
 class TemporalEventOperator(BaseModel):
-    operator: Literal["AND", "OR", "NOT"]
+    operator: Literal["AND", "OR", "NOT", "BEFORE"]
     events: List[Union[TemporalEventCriteria, "TemporalEventOperator"]]  # A list of events or nested operators
+
+    @model_validator(mode="before")
+    def validate_events_list(cls, values):
+        operator = values.get("operator")
+        events = values.get("events")
+
+        if not events or len(events) == 0:
+            raise ValueError(f"'{operator}' operator requires a non-empty 'events' list")
+
+        if operator == "NOT" and len(events) != 1:
+            raise ValueError("'NOT' operator must have exactly one event in 'events'")
+
+        if operator == "BEFORE" and len(events) != 2:
+            raise ValueError("'BEFORE' operator must have exactly two events in 'events'")
+
+        return values
 
 class ConditionCohortCriteria(BaseModel):
     demographics: Optional[DemographicsCriteria] = None  # Optional
-    temporal_events: Optional[List[TemporalEventOperator]] = None  # List of temporal event operators (AND, OR, NOT)
+    temporal_events: Optional[List[TemporalEventOperator]] = None  # List of temporal event operators
 
 class CohortCreationConfig(BaseModel):
     # SQL query template name

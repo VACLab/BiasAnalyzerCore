@@ -94,6 +94,58 @@ WHERE 1=1
                     )
                 {% endif %}
             {% endfor %}
+        {% elif event_group.operator == 'BEFORE' %}
+            {% if event_group.events[0].event_type == 'date' %}
+                {% set timestamp = event_group.events[0].timestamp %}
+                {% if event_group.events[1].event_type == 'condition_occurrence' %}
+                    AND EXISTS (
+                        SELECT 1
+                        FROM condition_occurrence e1
+                        WHERE e1.person_id = c.person_id
+                          AND e1.condition_concept_id = {{ event_group.events[1].event_concept_id }}
+                          AND e1.condition_start_date < '{{ timestamp }}'
+                    )
+                {% elif event_group.events[1].event_type == 'visit_occurrence' %}
+                    AND EXISTS (
+                        SELECT 1
+                        FROM visit_occurrence e1
+                        WHERE e1.person_id = c.person_id
+                          AND e1.visit_concept_id = {{ event_group.events[1].event_concept_id }}
+                          AND e1.visit_start_date < '{{ timestamp }}'
+                    )
+                {% endif %}
+            {% elif event_group.events[1].event_type == 'date' %}
+                {% set timestamp = event_group.events[1].timestamp %}
+                {% if event_group.events[0].event_type == 'condition_occurrence' %}
+                    AND EXISTS (
+                        SELECT 1
+                        FROM condition_occurrence e1
+                        WHERE e1.person_id = c.person_id
+                          AND e1.condition_concept_id = {{ event_group.events[0].event_concept_id }}
+                          AND e1.condition_start_date < '{{ timestamp }}'
+                    )
+                {% elif event_group.events[0].event_type == 'visit_occurrence' %}
+                    AND EXISTS (
+                        SELECT 1
+                        FROM visit_occurrence e1
+                        WHERE e1.person_id = c.person_id
+                          AND e1.visit_concept_id = {{ event_group.events[0].event_concept_id }}
+                          AND e1.visit_start_date < '{{ timestamp }}'
+                    )
+                {% endif %}
+            {% else %}
+                {% if event_group.events[0].event_type == 'condition_occurrence' and event_group.events[1].event_type == 'visit_occurrence' %}
+                    AND EXISTS (
+                        SELECT 1
+                        FROM condition_occurrence e1
+                        JOIN visit_occurrence e2 ON e1.person_id = e2.person_id
+                        WHERE e1.person_id = c.person_id
+                          AND e1.condition_concept_id = {{ event_group.events[0].event_concept_id }}
+                          AND e2.visit_concept_id = {{ event_group.events[1].event_concept_id }}
+                          AND e1.condition_start_date < e2.visit_start_date
+                    )
+                {% endif %}
+            {% endif %}
         {% endif %}
     {% endfor %}
 {% endif %}
