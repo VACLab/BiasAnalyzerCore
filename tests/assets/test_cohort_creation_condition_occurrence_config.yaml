@@ -10,11 +10,22 @@ inclusion_criteria:
       events:
         - operator: 'AND'
           events:
-            - event_type: 'condition_occurrence'
-              event_concept_id: 37311061 # COVID condition
             - event_type: 'visit_occurrence'
               event_concept_id: 9201        # inpatient visit
               event_instance: 1             # how many times the event has happened; default is 1
+            - operator: 'BEFORE'
+              events:
+                - event_type: date
+                  timestamp: '2020-03-15'
+                - event_type: 'condition_occurrence'
+                  event_concept_id: 37311061 # COVID condition
+            - operator: 'BEFORE'
+              events:
+                - event_type: 'condition_occurrence'
+                  event_concept_id: 37311061 # COVID condition
+                - event_type: date
+                  timestamp: '2020-12-11' # when the first COVID vaccine was given
+
         - operator: 'BEFORE'
           events:
           - event_type: 'visit_occurrence'

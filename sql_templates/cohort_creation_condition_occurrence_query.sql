@@ -1,4 +1,25 @@
-SELECT c.person_id, 
+WITH ranked_events AS (
+    SELECT
+        person_id,
+        condition_concept_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY person_id, condition_concept_id
+            ORDER BY condition_start_date ASC
+        ) AS event_instance
+    FROM condition_occurrence
+),
+ranked_visits AS (
+    SELECT
+        person_id,
+        visit_concept_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY person_id, visit_concept_id
+            ORDER BY visit_start_date ASC
+        ) AS event_instance
+    FROM visit_occurrence
+)
+
+SELECT c.person_id,
        c.condition_start_date as cohort_start_date, 
        c.condition_end_date as cohort_end_date
 FROM condition_occurrence c
