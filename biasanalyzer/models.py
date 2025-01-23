@@ -1,4 +1,4 @@
-from pydantic import BaseModel, StrictStr, ConfigDict, field_validator, model_validator, Field
+from pydantic import BaseModel, StrictStr, ConfigDict, field_validator, model_validator
 from typing import Optional, Literal, List, Union
 from datetime import date
 
@@ -42,6 +42,7 @@ class ConditionCriteria(BaseModel):
     # SNOMED Condition concept ID in OMOP (e.g., 37311061 for COVID-19)
     condition_concept_id: int
 
+
 class DemographicsCriteria(BaseModel):
     # Gender with "male" and "female" as valid input
     gender: Optional[Literal['male', 'female']] = None
@@ -57,7 +58,8 @@ class DemographicsCriteria(BaseModel):
                 raise ValueError("max_birth_year must be greater than or equal to min_birth_year")
         return max_birth_year
 
-class TemporalEventCriteria(BaseModel):
+
+class TemporalEvent(BaseModel):
     event_type: Literal['condition_occurrence', 'visit_occurrence', 'date']
     event_concept_id: Optional[int] = None  # Optional for 'date' event_type
     event_instance: Optional[int] = None  # Optional: Specific occurrence (e.g., 2nd hospitalization)
@@ -72,9 +74,38 @@ class TemporalEventCriteria(BaseModel):
             raise ValueError(f"'{event_type}' requires an 'event_concept_id'")
         return values
 
-class TemporalEventOperator(BaseModel):
+
+class TemporalEventGroup(BaseModel):
     operator: Literal["AND", "OR", "NOT", "BEFORE"]
-    events: List[Union[TemporalEventCriteria, "TemporalEventOperator"]]  # A list of events or nested operators
+    events: List[Union[TemporalEvent, "TemporalEventGroup"]]  # A list of events or nested operators
+    interval: Optional[List[Union[int, None]]] = None  # [start, end] interval only applying for BEFORE operator
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    @field_validator("interval", mode="before")
+    def validate_interval_structure(cls, value):
+        """Ensure interval is a list with exactly two elements, or None."""
+        if value is None:
+            return value
+        if not isinstance(value, list) or len(value) != 2:
+            raise ValueError("Interval must be a list with exactly two elements: [start, end].")
+        return value
+
+    @model_validator(mode="before")
+    def validate_interval_logic(cls, values):
+        operator = values.get("operator")
+        interval = values.get("interval")
+        """Ensure interval is logically consistent when operator is 'BEFORE'."""
+        if operator == "BEFORE" and interval is not None:
+            start, end = interval
+            if start is not None and not isinstance(start, int):
+                raise ValueError("Interval start must be an integer or None.")
+            if end is not None and not isinstance(end, int):
+                raise ValueError("Interval end must be an integer or None.")
+            if start is not None and end is not None and start > end:
+                raise ValueError("Interval start cannot be greater than interval end.")
+        return values
 
     @model_validator(mode="before")
     def validate_events_list(cls, values):
@@ -92,9 +123,19 @@ class TemporalEventOperator(BaseModel):
 
         return values
 
+    def get_interval_sql(self) -> str:
+        """Generate SQL for the interval."""
+        if not self.interval:
+            return ""
+        start = self.interval[0] if self.interval[0] is not None else 0
+        end = self.interval[1] if self.interval[1] is not None else 99999
+        return f"AND e2.event_date - e1.event_date BETWEEN {start} AND {end}"
+
+
 class ConditionCohortCriteria(BaseModel):
     demographics: Optional[DemographicsCriteria] = None  # Optional
-    temporal_events: Optional[List[TemporalEventOperator]] = None  # List of temporal event operators
+    temporal_events: Optional[List[TemporalEventGroup]] = None  # List of temporal event operators
+
 
 class CohortCreationConfig(BaseModel):
     # SQL query template name

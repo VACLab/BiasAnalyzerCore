@@ -77,6 +77,9 @@
             {{ event_2 }}
         ) e2 ON e1.person_id = e2.person_id
         WHERE e1.event_date < e2.event_date
+        {% if event_group.interval %}
+            {{ event_group.get_interval_sql() }}
+        {% endif %}
     )
 {% else %}
     {{ handle_operator(event_group.operator, filters) }}

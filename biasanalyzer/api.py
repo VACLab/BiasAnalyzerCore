@@ -170,7 +170,8 @@ class BIAS:
         if c_action:
             created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query_or_yaml_file,
                                                     created_by)
-            print('cohort created successfully')
+            if created_cohort is not None:
+                print('cohort created successfully')
             return created_cohort
         else:
             print('failed to create a valid cohort action object')

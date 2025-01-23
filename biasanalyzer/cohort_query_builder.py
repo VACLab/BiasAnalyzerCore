@@ -1,7 +1,5 @@
 import os
 from jinja2 import Environment, FileSystemLoader
-from pydantic import BaseModel
-from typing import Optional
 
 
 class CohortQueryBuilder:

@@ -6,34 +6,39 @@ inclusion_criteria:
     min_birth_year: 2000            # Born at the year of 2000 or after, optional field
     max_birth_year: 2020            # Born at the year of 2020 or before, optional field
   temporal_events:
-    - operator: 'OR'
+    - operator: 'AND'
       events:
-        - operator: 'AND'
+        - operator: 'OR'
           events:
             - event_type: 'visit_occurrence'
               event_concept_id: 9201        # inpatient visit
               event_instance: 2             # Optional, how many times the event has happened
-            - operator: 'BEFORE'
-              events:
-                - event_type: date
-                  timestamp: '2020-03-15'
-                - event_type: 'condition_occurrence'
-                  event_concept_id: 37311061 # COVID condition
-            - operator: 'BEFORE'
-              events:
-                - event_type: 'condition_occurrence'
-                  event_concept_id: 37311061 # COVID condition
-                - event_type: date
-                  timestamp: '2020-12-11' # when the first COVID vaccine was given
-
+            - event_type: 'visit_occurrence'
+              event_concept_id: 9203        # Emergency Room visit
         - operator: 'BEFORE'
+          # interval is an inclusive list, allowing lower or higher number being null indicating no lower or higher
+          # bound, respectively
+          interval: [2, 5]  # 2 to 5 days between difficulty breathing and COVID diagnosis 3/15/20 - 12/11/20
           events:
-          - event_type: 'visit_occurrence'
-            event_concept_id: 9203        # Emergency Room visit
-          - event_type: 'date'
-            timestamp: '2020-05-01'
+            - event_type: 'condition_occurrence'
+              event_concept_id: 40325645  # difficulty breathing
+            - operator: 'AND'
+              events:
+              - operator: 'BEFORE'
+                events:
+                  - event_type: date
+                    timestamp: '2020-03-15'
+                  - event_type: 'condition_occurrence'
+                    event_concept_id: 37311061 # COVID condition
+              - operator: 'BEFORE'
+                events:
+                  - event_type: 'condition_occurrence'
+                    event_concept_id: 37311061 # COVID condition
+                  - event_type: date
+                    timestamp: '2020-12-11' # when the first COVID vaccine was given
+
 exclusion_criteria:
-  demographics:                     # Optional
+  demographics:  # Optional
     min_birth_year: 2003
   temporal_events:
     - operator: 'NOT'
