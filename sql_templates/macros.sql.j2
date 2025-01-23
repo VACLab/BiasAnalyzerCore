@@ -47,9 +47,17 @@
 
 {% for event in event_group.events %}
     {% if event.event_type == 'condition_occurrence' %}
-        {% set filter_clause = "SELECT person_id, event_instance, event_date FROM ranked_event WHERE WHERE condition_concept_id = " ~ event.event_concept_id ~ " AND event_instance >= " ~ event.event_instance %}
+        {% if event.event_instance %}
+            {% set filter_clause = "SELECT person_id, event_instance, event_date FROM ranked_event WHERE condition_concept_id = " ~ event.event_concept_id ~ " AND event_instance >= " ~ event.event_instance %}
+        {% else %}
+            {% set filter_clause = "SELECT person_id, event_instance, event_date FROM ranked_event WHERE condition_concept_id = " ~ event.event_concept_id %}
+        {% endif %}
     {% elif event.event_type == 'visit_occurrence' %}
-        {% set filter_clause = "SELECT person_id, visit_instance AS event_instance, event_date FROM ranked_visits WHERE visit_concept_id = " ~ event.event_concept_id ~ " AND event_instance >= " ~ event.event_instance %}
+        {% if event.event_instance %}
+            {% set filter_clause = "SELECT person_id, event_instance, event_date FROM ranked_visits WHERE visit_concept_id = " ~ event.event_concept_id ~ " AND event_instance >= " ~ event.event_instance %}
+        {% else %}
+            {% set filter_clause = "SELECT person_id, event_instance, event_date FROM ranked_visits WHERE visit_concept_id = " ~ event.event_concept_id %}
+        {% endif %}
     {% elif event.event_type == 'date' and 'timestamp' in event %}
         {% set timestamp = event.timestamp %}
         {% set filter_clause = "SELECT NULL AS person_id, NULL AS event_instance, '" ~ timestamp ~ "' AS event_date" %}

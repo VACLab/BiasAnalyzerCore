@@ -12,7 +12,7 @@ inclusion_criteria:
           events:
             - event_type: 'visit_occurrence'
               event_concept_id: 9201        # inpatient visit
-              event_instance: 1             # how many times the event has happened; default is 1
+              event_instance: 2             # Optional, how many times the event has happened
             - operator: 'BEFORE'
               events:
                 - event_type: date
@@ -40,4 +40,3 @@ exclusion_criteria:
       events:
         - event_type: 'condition_occurrence'
           event_concept_id: 316139    # Exclude patients with heart failure
-          event_instance: 1

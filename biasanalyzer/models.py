@@ -1,4 +1,4 @@
-from pydantic import BaseModel, StrictStr, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, StrictStr, ConfigDict, field_validator, model_validator, Field
 from typing import Optional, Literal, List, Union
 from datetime import date
 
@@ -60,7 +60,7 @@ class DemographicsCriteria(BaseModel):
 class TemporalEventCriteria(BaseModel):
     event_type: Literal['condition_occurrence', 'visit_occurrence', 'date']
     event_concept_id: Optional[int] = None  # Optional for 'date' event_type
-    event_instance: Optional[int] = 1  # Optional: Specific occurrence (e.g., 2nd hospitalization)
+    event_instance: Optional[int] = None  # Optional: Specific occurrence (e.g., 2nd hospitalization)
     timestamp: Optional[str] = None
 
     @model_validator(mode="before")
