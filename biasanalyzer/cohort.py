@@ -1,23 +1,12 @@
 from sqlalchemy.exc import SQLAlchemyError
 import duckdb
-import os
 from datetime import datetime
 from pydantic import ValidationError
-from jinja2 import Environment, FileSystemLoader
 from biasanalyzer.models import CohortDefinition, Cohort
 from biasanalyzer.config import load_cohort_creation_config
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
 from biasanalyzer.utils import hellinger_distance, clean_string
-
-
-class CohortQueryBuilder:
-    def __init__(self):
-        template_path = os.path.join(os.path.dirname(__file__), "..", 'sql_templates')
-        self.env = Environment(loader=FileSystemLoader(template_path))
-
-    def build_query(self, template_name, **criteria):
-        template = self.env.get_template(f"{template_name}.sql")
-        return template.render(**criteria)
+from biasanalyzer.cohort_query_builder import CohortQueryBuilder
 
 
 class CohortData:
@@ -101,12 +90,7 @@ class CohortAction:
                       f'validation error: {ex}')
                 return None
 
-            template_name = cohort_config.get('template_name')
-            in_criteria = cohort_config.get('inclusion_criteria')
-            ex_criteria = cohort_config.get('exclusion_criteria', {})
-            query = self._query_builder.build_query(template_name,
-                                                    inclusion_criteria=in_criteria,
-                                                    exclusion_criteria=ex_criteria)
+            query = self._query_builder.build_query(cohort_config)
         else:
             query = clean_string(query_or_yaml_file)
 
