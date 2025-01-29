@@ -6,9 +6,9 @@ inclusion_criteria:
     min_birth_year: 2000            # Born at the year of 2000 or after, optional field
     max_birth_year: 2020            # Born at the year of 2020 or before, optional field
   temporal_events:
-    # The operator AND event below captures the patient has the condition with difficulty breathing
-    # 2 to 5 days before a COVID diagnosis 3/15/20-12/11/20 AND the patient has at least one
-    # emergency room visit or at least two inpatient visits
+    # The operator AND event below captures a cohort of patients who have the condition with
+    # difficulty breathing 2 to 5 days before a COVID diagnosis 3/15/20-12/11/20 AND have at
+    # least one emergency room visit or at least two inpatient visits
     - operator: 'AND'
       events:
         - operator: 'OR'
@@ -45,7 +45,7 @@ inclusion_criteria:
 
 exclusion_criteria:
   # Among those patients meeting the inclusion criteria, patients born after 2010 and with
-  # heart failure conditions will be excluded
+  # heart failure conditions will be excluded from the cohort
   demographics:  # Optional
     min_birth_year: 2010
   temporal_events:
