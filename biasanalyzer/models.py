@@ -76,12 +76,10 @@ class TemporalEvent(BaseModel):
 
 
 class TemporalEventGroup(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     operator: Literal["AND", "OR", "NOT", "BEFORE"]
     events: List[Union[TemporalEvent, "TemporalEventGroup"]]  # A list of events or nested operators
     interval: Optional[List[Union[int, None]]] = None  # [start, end] interval only applying for BEFORE operator
-
-    class Config:
-        arbitrary_types_allowed = True
 
     @field_validator("interval", mode="before")
     def validate_interval_structure(cls, value):

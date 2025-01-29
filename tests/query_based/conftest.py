@@ -7,7 +7,7 @@ import os
 
 @pytest.fixture(scope="session")
 def test_db():
-    config_file = os.path.join(os.path.dirname(__file__), 'assets', 'test_config.yaml')
+    config_file = os.path.join(os.path.dirname(__file__), '..', 'assets', 'test_config.yaml')
     config = load_config(config_file)
     db_path = config['root_omop_cdm_database']['database']
     conn = duckdb.connect(db_path)
