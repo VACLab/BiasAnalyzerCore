@@ -26,7 +26,7 @@ inclusion_criteria:
           interval: [2, 5]  # 2 to 5 days between difficulty breathing and COVID diagnosis 3/15/20 - 12/11/20
           events:
             - event_type: 'condition_occurrence'
-              event_concept_id: 40325645  # difficulty breathing
+              event_concept_id: 4041664  # difficulty breathing
             # The operator AND event below captures a COVID diagnosis between 3/15/20 and 12/11/20
             - operator: 'AND'
               events:

@@ -118,7 +118,6 @@ class CohortAction:
                 )
                 self.bias_db.create_cohort(cohort)
             print(f"Cohort {cohort_name} successfully created.")
-            omop_session.close()
             return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
         except duckdb.Error as e:
             print(f"Error executing query: {e}")
