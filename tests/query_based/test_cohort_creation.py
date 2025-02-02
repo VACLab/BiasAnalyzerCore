@@ -67,5 +67,5 @@ def test_cohort_creation_all(test_db):
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
     patient_ids = set([item['subject_id'] for item in cohort.data])
     print(f'patient_ids: {patient_ids}', flush=True)
-    assert_equal(len(patient_ids), 4)
-    assert_equal(patient_ids, {108, 110, 111, 112})
+    assert_equal(len(patient_ids), 2)
+    assert_equal(patient_ids, {108, 110})

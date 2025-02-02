@@ -1,4 +1,5 @@
 import os
+from biasanalyzer.models import TemporalEventGroup
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -54,23 +55,23 @@ class CohortQueryBuilder:
         if event["event_type"] == "condition_occurrence":
             if "event_instance" in event and event["event_instance"] is not None:
                 event_sql = (
-                    f"SELECT person_id FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']} "
+                    f"SELECT person_id, event_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']} "
                     f"AND event_instance >= {event['event_instance']}"
                 )
             else:
                 event_sql = (
-                    f"SELECT person_id FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']}"
+                    f"SELECT person_id, event_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']}"
                 )
 
         elif event["event_type"] == "visit_occurrence":
             if "event_instance" in event and event["event_instance"] is not None:
                 event_sql = (
-                    f"SELECT person_id FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']} "
+                    f"SELECT person_id, event_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']} "
                     f"AND event_instance >= {event['event_instance']}"
                 )
             else:
                 event_sql = (
-                    f"SELECT person_id FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']}"
+                    f"SELECT person_id, event_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']}"
                 )
 
         return event_sql
@@ -86,25 +87,63 @@ class CohortQueryBuilder:
         Returns:
             str: SQL query string for the event group.
         """
-        event_queries = []
-
+        queries = []
         if "events" not in event_group:  # Single event
             return CohortQueryBuilder.render_event(event_group)
+        else:
+            # queries = [CohortQueryBuilder.render_event_group(e) for e in event_group['events']]
+            for event in event_group["events"]:
+                event_sql = CohortQueryBuilder.render_event_group(event)
+                if event_sql:
+                    queries.append(event_sql)
+            if not queries:
+                return ""
 
-        for event in event_group["events"]:
-            event_sql = CohortQueryBuilder.render_event_group(event)
-            if event_sql:
-                event_queries.append(event_sql)
+            if event_group["operator"] == "AND":
+                return f"SELECT person_id FROM ({' INTERSECT '.join(queries)})"
+            elif event_group["operator"] == "OR":
+                return f"SELECT person_id FROM ({' UNION '.join(queries)})"
+            elif event_group["operator"] == "NOT":
+                return f"SELECT person_id FROM NOT IN ({queries[0]})"
+            elif event_group["operator"] == "BEFORE":
+                if len(queries) == 1:
+                    # the other query is the timestamp event which has to be handled here as it depends on the other
+                    # event in the BEFORE operator
+                    timestamp_event = next((e for e in event_group['events'] if e["event_type"] == "date"), None)
+                    non_timestamp_event = next((e for e in event_group['events'] if e["event_type"] != "date"), None)
+                    if timestamp_event and non_timestamp_event:
+                        timestamp = timestamp_event["timestamp"]
+                        non_timestamp_query = queries[0]
+                        timestamp_event_index = event_group['events'].index(timestamp_event)
+                        non_timestamp_event_index = event_group['events'].index(non_timestamp_event)
+                        if timestamp_event_index < non_timestamp_event_index:
+                            # timestamp needs to happen before non-timestamp event
+                            return f"{queries[0]} AND event_date > DATE '{timestamp}'"
+                        else:  # non-timestamp event needs to happen before timestamp
+                            return f"{queries[0]} AND event_date < DATE '{timestamp}'"
+                    else:
+                        print(f"This should not happen: event_group: {event_group} with BEFORE operator only "
+                              f"has one query event {queries}")
+                        return ''
+                elif len(queries) == 2:
+                    for i in range(len(queries)):
+                        if (queries[i].startswith('SELECT person_id')
+                                and (not queries[i].startswith('SELECT person_id, event_date'))):
+                            queries[i] = queries[i].replace('SELECT person_id', 'SELECT person_id, event_date', 1)
 
-        if not event_queries:
+                    event_group = TemporalEventGroup(**event_group)
+                    interval_sql = event_group.get_interval_sql()
+                    return f"""
+                            SELECT person_id  
+                            FROM ({queries[0]}) e1 
+                            WHERE EXISTS (
+                                SELECT 1 FROM ({queries[1]}) e2
+                                WHERE e1.person_id = e2.person_id
+                                AND e1.event_date < e2.event_date
+                                {interval_sql}                                    
+                            )
+                            """
             return ""
-
-        if event_group["operator"] == "AND":
-            return f"SELECT person_id FROM ({' INTERSECT '.join(event_queries)})"
-        elif event_group["operator"] == "OR":
-            return f"SELECT person_id FROM ({' UNION '.join(event_queries)})"
-
-        return ""
 
     def temporal_event_filter(self, event_groups):
         """
@@ -117,7 +156,6 @@ class CohortQueryBuilder:
             str: SQL filter for temporal event selection.
         """
         filters = []
-        print(f'event_groups: {event_groups}', flush=True)
         for event_group in event_groups:
             group_sql = self.render_event_group(event_group)
             if group_sql:
