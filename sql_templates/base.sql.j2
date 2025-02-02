@@ -26,6 +26,11 @@ SELECT c.person_id,
        c.condition_end_date as cohort_end_date
 FROM condition_occurrence c
 JOIN person p ON c.person_id = p.person_id
+
+{% block join_clauses %}
+-- Placeholder for dynamically added JOINs
+{% endblock %}
+
 WHERE 1=1
 {% block inclusion_criteria %}
 -- Inclusion criteria logic

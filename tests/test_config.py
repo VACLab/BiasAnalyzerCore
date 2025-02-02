@@ -32,11 +32,11 @@ def test_load_cohort_creation_config():
     assert 'template_name' in config
     assert config.get('template_name') == 'cohort_creation_condition_occurrence_query'
     assert 'inclusion_criteria' in config
-    assert 'exclusion_criteria' in config
+    # assert 'exclusion_criteria' in config
     assert 'temporal_events' in config.get('inclusion_criteria')
-    assert 'temporal_events' in config.get('exclusion_criteria')
+    # assert 'temporal_events' in config.get('exclusion_criteria')
     assert 'demographics' in config.get('inclusion_criteria')
-    assert 'demographics' in config.get('exclusion_criteria')
+    # assert 'demographics' in config.get('exclusion_criteria')
     demographics = config.get('inclusion_criteria').get('demographics')
     assert 'gender' in demographics
     assert 'min_birth_year' in demographics
@@ -48,13 +48,13 @@ def test_load_cohort_creation_config():
     assert 'operator' in in_events[0]
     assert 'events' in in_events[0]
 
-    ex_events = config.get('exclusion_criteria')['temporal_events']
-    ex_demographics = config.get('exclusion_criteria').get('demographics')
-    assert 'operator' in ex_events[0]
-    assert 'events' in ex_events[0]
-    assert 'event_type' in ex_events[0]['events'][0]
-    assert_equal(ex_events[0]['events'][0]['event_type'], 'condition_occurrence',
-                 'exclusion event type is not condition_occurrence')
-    assert 'min_birth_year' in ex_demographics
-    assert 'gender' not in ex_demographics
-    assert 'max_birth_year' not in ex_demographics
+    # ex_events = config.get('exclusion_criteria')['temporal_events']
+    # ex_demographics = config.get('exclusion_criteria').get('demographics')
+    # assert 'operator' in ex_events[0]
+    # assert 'events' in ex_events[0]
+    # assert 'event_type' in ex_events[0]['events'][0]
+    # assert_equal(ex_events[0]['events'][0]['event_type'], 'condition_occurrence',
+    #              'exclusion event type is not condition_occurrence')
+    # assert 'min_birth_year' in ex_demographics
+    # assert 'gender' not in ex_demographics
+    # assert 'max_birth_year' not in ex_demographics

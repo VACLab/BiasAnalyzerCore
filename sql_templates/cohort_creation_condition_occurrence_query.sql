@@ -1,12 +1,14 @@
 {% extends "base.sql.j2" %}
 
+{% block join_clauses %}
+{% if inclusion_criteria.temporal_events %}
+    {{ temporal_event_filter(inclusion_criteria.temporal_events) }}
+{% endif %}
+{% endblock %}
+
 {% block inclusion_criteria %}
 {% if inclusion_criteria.demographics %}
     {{ demographics_filter(inclusion_criteria.demographics) }}
-{% endif %}
-
-{% if inclusion_criteria.temporal_events %}
-    {{ temporal_event_filter(inclusion_criteria.temporal_events) }}
 {% endif %}
 {% endblock %}
 

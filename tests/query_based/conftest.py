@@ -114,10 +114,6 @@ def test_db():
                     (4041664, 4041664, 0),
                     (316139, 316139, 0),
                     (4274025, 4274025, 0),
-                    (4274025, 1, 1),
-                    (4274025, 316139, 1),
-                    (4274025, 4041664, 1),
-                    (4274025, 37311061, 1),
                     (1, 2, 1), -- Diabetes -> Type 1
                     (1, 3, 1), -- Diabetes -> Type 2
                     (1, 4, 2), -- Diabetes -> Retinopathy
@@ -140,6 +136,7 @@ def test_db():
                     (105, 3, '2023-02-01', NULL),         -- Patient 105 has Type 2 Diabetes, ongoing
                     (105, 4, '2023-03-01', '2023-03-15'), -- Patient 105 has Diabetic Retinopathy
                     (106, 5, '2023-03-01', '2023-03-15'), -- Patient 106 has fever
+                    (107, 5, '2020-03-01', '2020-03-15'), -- Patient 107 has fever
                     (108, 4041664, '2020-04-10', '2020-04-17'), -- Patient 108 has difficulty breathing
                     (108, 37311061, '2020-04-13', '2020-04-27'), -- Patient 108 has COVID-19
                     (110, 4041664, '2020-05-10', '2020-05-17'), -- Patient 110 has difficulty breathing
@@ -148,7 +145,7 @@ def test_db():
                     (111, 37311061, '2020-06-13', '2020-06-27'), -- Patient 111 has COVID-19
                     (112, 4041664, '2020-07-10', '2020-07-17'), -- Patient 112 has difficulty breathing
                     (112, 37311061, '2020-07-13', '2020-07-27'), -- Patient 112 has COVID-19
-                    (111, 316139, '2020-07-13', '2020-07-27'); -- Patient 111 has heart failur
+                    (111, 316139, '2020-07-13', '2020-07-27'); -- Patient 111 has heart failure
             """)
 
         # Insert mock visit data
