@@ -11,13 +11,11 @@
 
 {% block exclusion_criteria %}
 {% if exclusion_criteria %}
-    AND NOT EXISTS (
-        SELECT 1
-        FROM condition_occurrence c
-        JOIN person p ON c.person_id = p.person_id
-        WHERE c.person_id = p.person_id
-            {{ demographics_filter(exclusion_criteria.demographics) }}
-            {{ temporal_event_filter(exclusion_criteria.temporal_events) }}
-    )
+    {% if exclusion_criteria.demographics %}
+        {{ demographics_filter(exclusion_criteria.demographics) }}
+    {% endif %}
+    {% if exclusion_criteria.temporal_events %}
+        {{ temporal_event_filter(exclusion_criteria.temporal_events, alias="ex") }}
+    {% endif %}
 {% endif %}
 {% endblock %}

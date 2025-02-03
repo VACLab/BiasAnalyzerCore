@@ -78,7 +78,7 @@ def test_db():
                     (108, 8532, 8527, 38003564, 2002), -- Female, White, Non-Hispanic
                     (109, 8507, 8515, 38003563, 2003), -- Male, Black, Hispanic
                     (110, 8532, 8516, 38003563, 2004), -- Female, Asian, Hispanic
-                    (111, 8532, 8516, 38003564, 2005), -- Female, Asian, Non-Hispanic
+                    (111, 8532, 8516, 38003564, 2011), -- Female, Asian, Non-Hispanic
                     (112, 8532, 8527, 38003564, 2012); -- Female, White, Non-Hispanic
             """)
 
@@ -145,7 +145,8 @@ def test_db():
                     (111, 37311061, '2020-06-13', '2020-06-27'), -- Patient 111 has COVID-19
                     (112, 4041664, '2020-07-10', '2020-07-17'), -- Patient 112 has difficulty breathing
                     (112, 37311061, '2020-07-13', '2020-07-27'), -- Patient 112 has COVID-19
-                    (111, 316139, '2020-07-13', '2020-07-27'); -- Patient 111 has heart failure
+                    (111, 316139, '2020-06-14', '2020-06-27'), -- Patient 111 has heart failure
+                    (112, 316139, '2020-07-14', '2020-07-27'); -- Patient 112 has heart failure
             """)
 
         # Insert mock visit data

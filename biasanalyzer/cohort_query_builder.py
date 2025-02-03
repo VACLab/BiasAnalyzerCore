@@ -87,11 +87,10 @@ class CohortQueryBuilder:
         Returns:
             str: SQL query string for the event group.
         """
-        queries = []
+        queries = [] # accumulate SQL queries when called recursively with nested event groups
         if "events" not in event_group:  # Single event
             return CohortQueryBuilder.render_event(event_group)
         else:
-            # queries = [CohortQueryBuilder.render_event_group(e) for e in event_group['events']]
             for event in event_group["events"]:
                 event_sql = CohortQueryBuilder.render_event_group(event)
                 if event_sql:
@@ -104,7 +103,10 @@ class CohortQueryBuilder:
             elif event_group["operator"] == "OR":
                 return f"SELECT person_id FROM ({' UNION '.join(queries)})"
             elif event_group["operator"] == "NOT":
-                return f"SELECT person_id FROM NOT IN ({queries[0]})"
+                if queries[0].startswith('SELECT person_id, event_date'):
+                    queries[0] = queries[0].replace('SELECT person_id, event_date', 'SELECT person_id', 1)
+                table_name = event_group["events"][0]['event_type']
+                return f"SELECT person_id FROM {table_name} WHERE person_id NOT IN ({queries[0]})"
             elif event_group["operator"] == "BEFORE":
                 if len(queries) == 1:
                     # the other query is the timestamp event which has to be handled here as it depends on the other
@@ -113,7 +115,6 @@ class CohortQueryBuilder:
                     non_timestamp_event = next((e for e in event_group['events'] if e["event_type"] != "date"), None)
                     if timestamp_event and non_timestamp_event:
                         timestamp = timestamp_event["timestamp"]
-                        non_timestamp_query = queries[0]
                         timestamp_event_index = event_group['events'].index(timestamp_event)
                         non_timestamp_event_index = event_group['events'].index(non_timestamp_event)
                         if timestamp_event_index < non_timestamp_event_index:
@@ -145,13 +146,14 @@ class CohortQueryBuilder:
                             """
             return ""
 
-    def temporal_event_filter(self, event_groups):
+    def temporal_event_filter(self, event_groups, alias='c'):
         """
         Generates the SQL filter for temporal event criteria.
 
         Args:
             event_groups (list): List of event groups (dictionaries) to be processed.
-
+            alias (str): Alias for the table name to use for filtering.
+            Default is 'c' representing condition_occurrence table.
         Returns:
             str: SQL filter for temporal event selection.
         """
@@ -159,6 +161,6 @@ class CohortQueryBuilder:
         for event_group in event_groups:
             group_sql = self.render_event_group(event_group)
             if group_sql:
-                filters.append(f"AND c.person_id IN ({group_sql})")
+                filters.append(f"AND {alias}.person_id IN ({group_sql})")
 
         return " ".join(filters) if filters else ""

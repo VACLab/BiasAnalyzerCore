@@ -19,19 +19,29 @@ ranked_visits AS (
             ORDER BY visit_start_date ASC
         ) AS event_instance
     FROM visit_occurrence
+),
+filtered_cohort AS (
+    SELECT c.person_id,
+           c.condition_start_date AS cohort_start_date,
+           c.condition_end_date AS cohort_end_date
+    FROM condition_occurrence c
+    JOIN person p ON c.person_id = p.person_id
+    WHERE 1=1
+    {% block inclusion_criteria %}
+    -- Inclusion criteria logic
+    {% endblock %}
 )
 
-SELECT c.person_id,
-       c.condition_start_date as cohort_start_date,
-       c.condition_end_date as cohort_end_date
-FROM condition_occurrence c
-JOIN person p ON c.person_id = p.person_id
-
-WHERE 1=1
-{% block inclusion_criteria %}
--- Inclusion criteria logic
-{% endblock %}
-
-{% block exclusion_criteria %}
--- Exclusion criteria logic
-{% endblock %}
+SELECT *
+FROM filtered_cohort f
+{% if exclusion_criteria %}
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM filtered_cohort ex
+    JOIN person p ON ex.person_id = p.person_id
+    WHERE ex.person_id = f.person_id
+    {% block exclusion_criteria %}
+    -- Exclusion criteria logic
+    {% endblock %}
+)
+{% endif %}

@@ -23,7 +23,7 @@ def test_load_config():
 def test_load_cohort_creation_config():
     try:
         config = load_cohort_creation_config(
-            os.path.join(os.path.dirname(__file__), 'assets',
+            os.path.join(os.path.dirname(__file__), 'assets', 'cohort_creation',
                          'test_cohort_creation_condition_occurrence_config.yaml'))
     except Exception as e:
         assert False, f"test_load_cohort_creation_config() raised an exception: {e}"
