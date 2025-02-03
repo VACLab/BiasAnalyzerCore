@@ -99,9 +99,9 @@ class CohortQueryBuilder:
                 return ""
 
             if event_group["operator"] == "AND":
-                return f"SELECT person_id FROM ({' INTERSECT '.join(queries)})"
+                return f"SELECT person_id FROM ({' INTERSECT '.join(queries)}) AS subquery_and"
             elif event_group["operator"] == "OR":
-                return f"SELECT person_id FROM ({' UNION '.join(queries)})"
+                return f"SELECT person_id FROM ({' UNION '.join(queries)}) AS subquery_or"
             elif event_group["operator"] == "NOT":
                 if queries[0].startswith('SELECT person_id, event_date'):
                     queries[0] = queries[0].replace('SELECT person_id, event_date', 'SELECT person_id', 1)

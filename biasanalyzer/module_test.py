@@ -7,7 +7,8 @@ import pandas as pd
 def cohort_creation_template_test(bias_obj):
     cohort_data = bias_obj.create_cohort('COVID-19 patients', 'COVID-19 patients',
                                          os.path.join(os.path.dirname(__file__), '..', 'tests', 'assets',
-                                                      'test_cohort_creation_condition_occurrence_config_study.yaml'),
+                                                      'cohort_creation',
+                                                      'test_cohort_creation_condition_occurrence_config.yaml'),
                                          'system')
     if cohort_data:
         md = cohort_data.metadata
