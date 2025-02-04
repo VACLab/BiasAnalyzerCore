@@ -25,14 +25,17 @@ jobs:
       with:
         python-version: "3.8.18"  # Use your project’s Python version
 
-    # Step 3: Install Poetry
+    - name: Install dependencies needed for Poetry
+      run: sudo apt-get update && sudo apt-get install -y python3-venv
+
+      # Step 3: Install Poetry
     - name: Install Poetry
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
       env:
-        POETRY_HOME: $HOME/.local/bin
+        POETRY_HOME: $HOME/.local
     - name: Add Poetry to PATH
-      run: echo "$HOME/.local/bin/bin" >> $GITHUB_PATH
+      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     # Step 4: Install dependencies
     - name: Install dependencies
