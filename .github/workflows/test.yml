@@ -33,9 +33,9 @@ jobs:
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
       env:
-        POETRY_HOME: $HOME/.local
+        POETRY_HOME: $HOME/.poetry
     - name: Add Poetry to PATH
-      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      run: echo "$HOME/.poetry/bin" >> $GITHUB_PATH
 
     # Step 4: Install dependencies
     - name: Install dependencies
