@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     # Step 1: Checkout the repository
@@ -25,17 +25,11 @@ jobs:
       with:
         python-version: "3.8.18"  # Use your project’s Python version
 
-    - name: Install dependencies needed for Poetry
-      run: sudo apt-get update && sudo apt-get install -y python3-venv
-
-      # Step 3: Install Poetry
+    # Step 3: Install Poetry
     - name: Install Poetry
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
-      env:
-        POETRY_HOME: $HOME/.poetry
-    - name: Add Poetry to PATH
-      run: echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     # Step 4: Install dependencies
     - name: Install dependencies
@@ -46,4 +40,3 @@ jobs:
     - name: Run tests
       run: |
         poetry run pytest -s --cov=biasanalyzer
-
