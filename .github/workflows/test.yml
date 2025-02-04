@@ -32,7 +32,7 @@ jobs:
       env:
         POETRY_HOME: $HOME/.local/bin
     - name: Add Poetry to PATH
-      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      run: echo "$HOME/.local/bin/bin" >> $GITHUB_PATH
 
     # Step 4: Install dependencies
     - name: Install dependencies
