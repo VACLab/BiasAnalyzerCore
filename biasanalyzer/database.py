@@ -261,7 +261,7 @@ class BiasDatabase:
                     # Combine concept_name and prevalence into a "details" column
                     cs_df["details"] = cs_df.apply(
                         lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
-                                    f"Prevalence: {row['prevalence']:.3%})", axis=1)
+                                    f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})", axis=1)
                     filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
                     roots = find_roots(filtered_cs_df)
                     hierarchy = build_concept_hierarchy(filtered_cs_df)

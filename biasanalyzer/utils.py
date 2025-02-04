@@ -1,8 +1,19 @@
 import numpy as np
+import re
+
 
 def get_direction_arrow(tree_type):
     # the two unicodes are for up and down arrows
     return "\U0001F53C" if tree_type == 'parents' else "\U0001F53D"
+
+
+def clean_string(text):
+    # replace newlines and tabs with a space
+    text = re.sub(r'[\n\t]', ' ', text)
+    # Replace multiple spaces with a single space
+    text = re.sub(r'\s+', ' ', text)
+    # Strip leading and trailing spaces
+    return text.strip()
 
 
 def hellinger_distance(p, q):

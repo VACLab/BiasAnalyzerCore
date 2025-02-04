@@ -1,0 +1,47 @@
+WITH ranked_events AS (
+    SELECT
+        person_id,
+        condition_concept_id,
+        condition_start_date AS event_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY person_id, condition_concept_id
+            ORDER BY condition_start_date ASC
+        ) AS event_instance
+    FROM condition_occurrence
+),
+ranked_visits AS (
+    SELECT
+        person_id,
+        visit_concept_id,
+        visit_start_date AS event_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY person_id, visit_concept_id
+            ORDER BY visit_start_date ASC
+        ) AS event_instance
+    FROM visit_occurrence
+),
+filtered_cohort AS (
+    SELECT c.person_id,
+           c.condition_start_date AS cohort_start_date,
+           c.condition_end_date AS cohort_end_date
+    FROM condition_occurrence c
+    JOIN person p ON c.person_id = p.person_id
+    WHERE 1=1
+    {% block inclusion_criteria %}
+    -- Inclusion criteria logic
+    {% endblock %}
+)
+
+SELECT *
+FROM filtered_cohort f
+{% if exclusion_criteria %}
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM filtered_cohort ex
+    JOIN person p ON ex.person_id = p.person_id
+    WHERE ex.person_id = f.person_id
+    {% block exclusion_criteria %}
+    -- Exclusion criteria logic
+    {% endblock %}
+)
+{% endif %}

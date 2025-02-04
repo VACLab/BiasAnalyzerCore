@@ -1,0 +1,15 @@
+{% macro demographics_filter(demographics) -%}
+    {% if demographics.gender %}
+        {% if demographics.gender == 'female' %}
+            AND p.gender_concept_id = 8532
+        {% elif demographics.gender == 'male' %}
+            AND p.gender_concept_id = 8507
+        {% endif %}
+    {% endif %}
+    {% if demographics.min_birth_year %}
+        AND p.year_of_birth >= {{ demographics.min_birth_year }}
+    {% endif %}
+    {% if demographics.max_birth_year %}
+        AND p.year_of_birth <= {{ demographics.max_birth_year }}
+    {% endif %}
+{%- endmacro %}
