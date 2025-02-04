@@ -28,7 +28,7 @@ jobs:
     # Step 3: Install Poetry
     - name: Install Poetry
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
+        curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.4 python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     # Step 4: Install dependencies
