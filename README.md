@@ -14,10 +14,11 @@ code snippets are also provided in each step for easy reference.
 install it directly from this github repo. For example, run 
 `!TMPDIR=<local_temp_dir> pip install git+https://github.com/vaclab/BiasAnalyzer.git --target <local_target_dir> --upgrade`
 in a Jupyter notebook to install the python package from this github repo. 
-- Run code below to append the target directory where the package was installed to PYTHONPATH.
+- Run code below to append the target directory where the package was installed to PYTHONPATH. This step is optional and 
+will only be needed if a different <local_target_dir> than the default target directory is specified in the `pip install` command.
   ```
   import sys
-  sys.path.append('/home/hyi/temp')
+  sys.path.append('<local_target_dir>')
   ```
 - Run `from biasanalyzer.api import BIAS` to import the module API.
 - Run `bias = BIAS()` to create an object of the imported BIAS class.
