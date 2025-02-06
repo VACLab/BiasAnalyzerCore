@@ -93,3 +93,6 @@ and `get_distributions()` method only returns distribution of age and gender in 
 - There is also an API method that enables users to compare distributions of two cohorts by calling `bias.compare_cohorts(cohort1_id, cohort2_id)` 
 where cohort1_id and cohort2_id are integers and can be obtained from metadata of a cohort object. Currently, 
 only hellinger distances between distributions of two cohorts are computed.
+
+- After all analysis is done, please make sure to close database connections and do necessary cleanups by calling 
+the API method `bias.cleanup()`.

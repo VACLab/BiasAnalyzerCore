@@ -90,8 +90,8 @@ if __name__ == '__main__':
         bias.set_root_omop()
 
         cohort_creation_template_test(bias)
-        #condition_cohort_test(bias)
-        #concept_test(bias)
+        condition_cohort_test(bias)
+        concept_test(bias)
     finally:
         if bias is not None:
             bias.cleanup()
