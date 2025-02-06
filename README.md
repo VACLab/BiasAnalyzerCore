@@ -61,11 +61,35 @@ environment, you can set `show_in_text_format` input parameter to `False`
 (e.g., call `bias.display_concept_tree(parent_concept_tree,  show_in_text_format=False)`)to leverage the tree widget for displaying 
 the hierarchy in a tree that can be expanded and collapsed on demand interactively.   
 
-In addition, you can create a cohort 
-- Run code snippets below to create a baseline patient cohort.
+In addition to exploring the concepts using BiasAnalyzer APIs, the main functionalities of the BiasAnalyzer is 
+to enable users to track, quantify, analyze, and communicate bias in cohort selection. The cohort-related APIs 
+currently available are summarized below for your easy reference.
+
+- You can create a baseline or study cohort using the `create_cohort()` API as shown below:
   ```angular2html
-     
+  baseline_cohort = bias.create_cohort("cohort_name", "cohort_description", 
+  "SQL query or a yaml file name with full path", 'created_by_name')       
   ```
+  The SQL query string must be a valid SQL query statement that can be executed in the OMOP CDM database. Here is 
+a SQL query example for your reference: 
+`SELECT person_id, condition_start_date as cohort_start_date, condition_end_date as cohort_end_date, FROM condition_occurrence WHERE condition_concept_id = 37311061`. 
+As you can see, creating such a SQL query statement requires expertise about SQL query and OMOP CDM database tables 
+which most users don't possess. An alternative method for cohort creation is to create a YAML file 
+that lists inclusion and exclusion criteria for creating a specific cohort declaratively. You can refer to 
+several YAML file examples for creating cohort in this [test folder](https://github.com/VACLab/BiasAnalyzer/tree/main/tests/assets/cohort_creation)
+- After a cohort is created, a cohort object, e.g., baseline_cohort, is returned. You can then get metadata, 
+data, statistics, and distributions of the cohort by accessing properties and methods of the created cohort objects. 
+The following code snippets show some examples.
+  ```angular2html
+  baseline_cohort_def = baseline_cohort.metadata
+  baseline_cohort_data = baseline_cohort.data
+  cohort_stats = baseline_cohort.get_stats()
+  cohort_age_stats = baseline_cohort.get_stats("age")
+  cohort_age_distr = baseline_cohort.get_distributions('age')
+  ```
+  Note that currently the `get_stats()` method only returns statistics of age, gender, race, and ethinicity of a cohort 
+and `get_distributions()` method only returns distribution of age and gender in a cohort.
 
-
-
+- There is also an API method that enables users to compare distributions of two cohorts by calling `bias.compare_cohorts(cohort1_id, cohort2_id)` 
+where cohort1_id and cohort2_id are integers and can be obtained from metadata of a cohort object. Currently, 
+only hellinger distances between distributions of two cohorts are computed.
