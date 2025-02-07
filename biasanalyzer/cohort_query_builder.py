@@ -11,13 +11,13 @@ class CohortQueryBuilder:
         try:
             if sys.version_info >= (3, 9):
                 # Python 3.9+: Use importlib.resources.files()
-                template_path = importlib.resources.files("BiasAnalyzer").joinpath("sql_templates")
+                template_path = importlib.resources.files("biasanalyzer").joinpath("sql_templates")
             else:
                 # Python 3.8: Use importlib.resources.path() (context manager)
-                with importlib.resources.path("BiasAnalyzer", "sql_templates") as p:
+                with importlib.resources.path("biasanalyzer", "sql_templates") as p:
                     template_path = str(p)
         except ModuleNotFoundError:
-            template_path = os.path.join(os.path.dirname(__file__), "..", "sql_templates")
+            template_path = os.path.join(os.path.dirname(__file__), "sql_templates")
 
         print(f'template_path: {template_path}')
         self.env = Environment(loader=FileSystemLoader(template_path), extensions=['jinja2.ext.do'])

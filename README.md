@@ -12,14 +12,8 @@ code snippets are also provided in each step for easy reference.
 
 - Install the BiasAnalyzer python package from [pypi](https://pypi.org/) or 
 install it directly from this github repo. For example, run 
-`!TMPDIR=<local_temp_dir> pip install git+https://github.com/vaclab/BiasAnalyzer.git --target <local_target_dir> --upgrade`
-in a Jupyter notebook to install the python package from this github repo. 
-- Run code below to append the target directory where the package was installed to PYTHONPATH. This step is optional and 
-will only be needed if a different <local_target_dir> than the default target directory is specified in the `pip install` command.
-  ```
-  import sys
-  sys.path.append('<local_target_dir>')
-  ```
+`pip install git+https://github.com/vaclab/BiasAnalyzer.git`
+to install the python package from this github repo. 
 - Run `from biasanalyzer.api import BIAS` to import the module API.
 - Run `bias = BIAS()` to create an object of the imported BIAS class.
 - Create a config.yaml file for specifying OMOP database connection configuration information. 
