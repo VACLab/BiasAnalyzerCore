@@ -1,11 +1,25 @@
 import os
+import sys
+import importlib.resources
 from biasanalyzer.models import TemporalEventGroup
 from jinja2 import Environment, FileSystemLoader
 
 
 class CohortQueryBuilder:
     def __init__(self):
-        template_path = os.path.join(os.path.dirname(__file__), "..", 'sql_templates')
+        """Get the path to SQL templates, whether running from source or installed."""
+        try:
+            if sys.version_info >= (3, 9):
+                # Python 3.9+: Use importlib.resources.files()
+                template_path = importlib.resources.files("BiasAnalyzer").joinpath("sql_templates")
+            else:
+                # Python 3.8: Use importlib.resources.path() (context manager)
+                with importlib.resources.path("BiasAnalyzer", "sql_templates") as p:
+                    template_path = str(p)
+        except ModuleNotFoundError:
+            template_path = os.path.join(os.path.dirname(__file__), "..", "sql_templates")
+
+        print(f'template_path: {template_path}')
         self.env = Environment(loader=FileSystemLoader(template_path), extensions=['jinja2.ext.do'])
         self.env.globals.update(
             demographics_filter=self._load_macro('demographics_filter'),
