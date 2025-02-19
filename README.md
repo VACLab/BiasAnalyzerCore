@@ -84,7 +84,12 @@ The following code snippets show some examples.
   ```
   Note that currently the `get_stats()` method only returns statistics of age, gender, race, and ethinicity of a cohort 
 and `get_distributions()` method only returns distribution of age and gender in a cohort.
-
+- You can also get patient counts and prevalence with each diagnostic condition concept code in a cohort by accessing 
+the method `get_concept_stats()` with a code snippet example shown below.
+  ```angular2html
+    cohort_concepts = baseline_cohort_data.get_concept_stats()
+    print(pd.DataFrame(cohort_concepts["condition_occurrence"]))
+  ```
 - There is also an API method that enables users to compare distributions of two cohorts by calling `bias.compare_cohorts(cohort1_id, cohort2_id)` 
 where cohort1_id and cohort2_id are integers and can be obtained from metadata of a cohort object. Currently, 
 only hellinger distances between distributions of two cohorts are computed.
