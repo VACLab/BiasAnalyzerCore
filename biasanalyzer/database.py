@@ -239,7 +239,8 @@ class BiasDatabase:
             return None
 
     def get_cohort_concept_stats(self, cohort_definition_id: int,
-                                 concept_type='condition_occurrence', filter_count=0, vocab=None):
+                                 concept_type='condition_occurrence', filter_count=0, vocab=None,
+                                 include_hierarchy=False):
         """
         Get concept statistics for a cohort from the cohort table.
         """
@@ -255,7 +256,7 @@ class BiasDatabase:
                     if not vocab:
                         vocab = self.__class__.cohort_concept_queries[concept_type]['default_vocab']
                     query = query_str.format(cid=cohort_definition_id, filter_count=filter_count,
-                                             vocab=vocab)
+                                             vocab=vocab, include_hierarchy=include_hierarchy)
                     concept_stats[concept_type] = self._execute_query(query)
                     cs_df = pd.DataFrame(concept_stats[concept_type])
                     # Combine concept_name and prevalence into a "details" column

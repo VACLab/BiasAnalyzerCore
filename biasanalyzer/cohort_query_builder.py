@@ -47,7 +47,7 @@ class CohortQueryBuilder:
         template_name = cohort_config.get('template_name')
         inclusion_criteria = cohort_config.get('inclusion_criteria')
         exclusion_criteria = cohort_config.get('exclusion_criteria', {})
-        template = self.env.get_template(f"{template_name}.sql")
+        template = self.env.get_template(f"{template_name}.sql.j2")
         return template.render(
             inclusion_criteria=inclusion_criteria,
             exclusion_criteria=exclusion_criteria

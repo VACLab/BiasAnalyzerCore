@@ -189,6 +189,7 @@ COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY = '''
     JOIN
         concept c ON ac.concept_id = c.concept_id
     WHERE ac.count_in_cohort > {filter_count} 
+        AND ({include_hierarchy} = True OR ch.ancestor_concept_id = ch.descendant_concept_id)
     ORDER BY 
         prevalence DESC;
 '''
@@ -251,6 +252,7 @@ COHORT_CONCEPT_DRUG_PREVALENCE_QUERY = '''
     JOIN
         concept c ON ac.concept_id = c.concept_id
     WHERE ac.count_in_cohort > {filter_count} 
+        AND ({include_hierarchy} = True OR ch.ancestor_concept_id = ch.descendant_concept_id)
     ORDER BY 
         prevalence DESC;
 '''
