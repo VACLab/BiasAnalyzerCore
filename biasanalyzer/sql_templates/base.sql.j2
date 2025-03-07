@@ -2,7 +2,8 @@ WITH ranked_events AS (
     SELECT
         person_id,
         condition_concept_id,
-        condition_start_date AS event_date,
+        condition_start_date AS event_start_date,
+        condition_end_date AS event_end_date,
         ROW_NUMBER() OVER (
             PARTITION BY person_id, condition_concept_id
             ORDER BY condition_start_date ASC
@@ -13,23 +14,28 @@ ranked_visits AS (
     SELECT
         person_id,
         visit_concept_id,
-        visit_start_date AS event_date,
+        visit_start_date AS event_start_date,
+        visit_end_date AS event_end_date,
         ROW_NUMBER() OVER (
             PARTITION BY person_id, visit_concept_id
             ORDER BY visit_start_date ASC
         ) AS event_instance
     FROM visit_occurrence
 ),
+condition_qualifying_events AS (
+    {% block inclusion_temporal_event_criteria %}
+    {% endblock %}
+),
 filtered_cohort AS (
     SELECT c.person_id,
-           c.condition_start_date AS cohort_start_date,
-           c.condition_end_date AS cohort_end_date
-    FROM condition_occurrence c
+           MIN(c.event_start_date) AS cohort_start_date,
+           MAX(c.event_end_date) AS cohort_end_date
+    FROM condition_qualifying_events c
     JOIN person p ON c.person_id = p.person_id
     WHERE 1=1
-    {% block inclusion_criteria %}
-    -- Inclusion criteria logic
+    {% block inclusion_demographics_criteria %}
     {% endblock %}
+    GROUP BY c.person_id
 )
 
 SELECT *

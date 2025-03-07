@@ -69,23 +69,23 @@ class CohortQueryBuilder:
         if event["event_type"] == "condition_occurrence":
             if "event_instance" in event and event["event_instance"] is not None:
                 event_sql = (
-                    f"SELECT person_id, event_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']} "
+                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']} "
                     f"AND event_instance >= {event['event_instance']}"
                 )
             else:
                 event_sql = (
-                    f"SELECT person_id, event_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']}"
+                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']}"
                 )
 
         elif event["event_type"] == "visit_occurrence":
             if "event_instance" in event and event["event_instance"] is not None:
                 event_sql = (
-                    f"SELECT person_id, event_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']} "
+                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']} "
                     f"AND event_instance >= {event['event_instance']}"
                 )
             else:
                 event_sql = (
-                    f"SELECT person_id, event_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']}"
+                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']}"
                 )
 
         return event_sql
@@ -113,14 +113,35 @@ class CohortQueryBuilder:
                 return ""
 
             if event_group["operator"] == "AND":
-                return f"SELECT person_id FROM ({' INTERSECT '.join(queries)}) AS subquery_and"
+                if len(queries) == 1:
+                    return queries[0]
+                base_query = queries[0]  # First event subquery
+                combined_sql = f"SELECT person_id, event_start_date, event_end_date FROM ({base_query}) AS e0"
+                for i, query in enumerate(queries[1:], 1):
+                    combined_sql += f"""
+                                    JOIN (
+                                        SELECT person_id, event_start_date, event_end_date
+                                        FROM ({query}) AS e{i}
+                                    ) AS e{i}
+                                    ON e0.person_id = e{i}.person_id
+                                """
+                return combined_sql
             elif event_group["operator"] == "OR":
-                return f"SELECT person_id FROM ({' UNION '.join(queries)}) AS subquery_or"
+                return f"SELECT person_id, event_start_date, event_end_date FROM ({' UNION '.join(queries)}) AS subquery_or"
             elif event_group["operator"] == "NOT":
-                if queries[0].startswith('SELECT person_id, event_date'):
-                    queries[0] = queries[0].replace('SELECT person_id, event_date', 'SELECT person_id', 1)
-                table_name = event_group["events"][0]['event_type']
-                return f"SELECT person_id FROM {table_name} WHERE person_id NOT IN ({queries[0]})"
+                if len(queries) != 1:
+                    raise ValueError("NOT operator expects exactly one event subquery")
+                    # Keep the full subquery with dates for consistency, but use it as a filter
+                not_query = queries[0]
+                # Return a query that selects all persons from a base table (e.g., person),
+                # excluding those in the NOT subquery, while allowing dates from other criteria
+                return f"""
+                        SELECT p.person_id, NULL AS event_start_date, NULL AS event_end_date
+                        FROM person p
+                        WHERE p.person_id NOT IN (
+                            SELECT person_id FROM ({not_query}) AS not_evt
+                        )
+                    """
             elif event_group["operator"] == "BEFORE":
                 if len(queries) == 1:
                     # the other query is the timestamp event which has to be handled here as it depends on the other
@@ -133,9 +154,18 @@ class CohortQueryBuilder:
                         non_timestamp_event_index = event_group['events'].index(non_timestamp_event)
                         if timestamp_event_index < non_timestamp_event_index:
                             # timestamp needs to happen before non-timestamp event
-                            return f"{queries[0]} AND event_date > DATE '{timestamp}'"
-                        else:  # non-timestamp event needs to happen before timestamp
-                            return f"{queries[0]} AND event_date < DATE '{timestamp}'"
+                            return f"""
+                                        SELECT person_id, event_start_date, event_end_date
+                                        FROM ({queries[0]}) AS e0
+                                        WHERE event_start_date > DATE '{timestamp}'
+                                    """
+                        else:
+                            # non-timestamp event needs to happen before timestamp
+                            return f"""
+                                        SELECT person_id, event_start_date, event_end_date
+                                        FROM ({queries[0]}) AS e0
+                                        WHERE event_start_date < DATE '{timestamp}'
+                                    """
                     else:
                         print(f"This should not happen: event_group: {event_group} with BEFORE operator only "
                               f"has one query event {queries}")
@@ -143,20 +173,26 @@ class CohortQueryBuilder:
                 elif len(queries) == 2:
                     for i in range(len(queries)):
                         if (queries[i].startswith('SELECT person_id')
-                                and (not queries[i].startswith('SELECT person_id, event_date'))):
-                            queries[i] = queries[i].replace('SELECT person_id', 'SELECT person_id, event_date', 1)
+                                and (not queries[i].startswith('SELECT person_id, event_start_date, event_end_date'))):
+                            queries[i] = queries[i].replace('SELECT person_id', 'SELECT person_id, event_start_date, event_end_date', 1)
 
                     event_group = TemporalEventGroup(**event_group)
                     interval_sql = event_group.get_interval_sql()
+                    # Ensure both events contribute dates with temporal order and interval
                     return f"""
-                            SELECT person_id  
-                            FROM ({queries[0]}) e1 
-                            WHERE EXISTS (
-                                SELECT 1 FROM ({queries[1]}) e2
-                                WHERE e1.person_id = e2.person_id
-                                AND e1.event_date < e2.event_date
-                                {interval_sql}                                    
-                            )
+                                SELECT e1.person_id, e1.event_start_date, e1.event_end_date
+                                FROM ({queries[0]}) AS e1
+                                JOIN ({queries[1]}) AS e2
+                                ON e1.person_id = e2.person_id
+                                AND e1.event_start_date < e2.event_start_date
+                                {interval_sql}
+                                UNION ALL
+                                SELECT e2.person_id, e2.event_start_date, e2.event_end_date
+                                FROM ({queries[1]}) AS e2
+                                JOIN ({queries[0]}) AS e1
+                                ON e2.person_id = e1.person_id
+                                AND e1.event_start_date < e2.event_start_date
+                                {interval_sql}
                             """
             return ""
 
@@ -167,7 +203,8 @@ class CohortQueryBuilder:
         Args:
             event_groups (list): List of event groups (dictionaries) to be processed.
             alias (str): Alias for the table name to use for filtering.
-            Default is 'c' representing condition_occurrence table.
+            Default is 'c' representing condition_occurrence table or condition_qualifying_event CTE.
+            'ex' alias represents the exclusion criteria filtering
         Returns:
             str: SQL filter for temporal event selection.
         """
@@ -175,6 +212,20 @@ class CohortQueryBuilder:
         for event_group in event_groups:
             group_sql = self.render_event_group(event_group)
             if group_sql:
-                filters.append(f"AND {alias}.person_id IN ({group_sql})")
-
-        return " ".join(filters) if filters else ""
+                if alias == 'ex':
+                    # exclusion criteria
+                    filters.append(f"AND {alias}.person_id IN (SELECT person_id FROM ({group_sql}))")
+                else:
+                    filters.append(f"({group_sql})")
+        if not filters:
+            return ""
+        if alias == 'ex':
+            # For exclusion, combine with AND as filters
+            return " ".join(filters)
+        else:
+            # For inclusion, combine as a single subquery (assuming one event group for simplicity)
+            # If multiple groups, may need UNION or further logic
+            if len(filters) > 1:
+                return (f"SELECT person_id, event_start_date, event_end_date FROM "
+                        f"({' UNION ALL '.join(filters)}) AS combined_events")
+            return filters[0]  # Single event group case

@@ -33,7 +33,7 @@ class Cohort(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     cohort_definition_id: int
     subject_id: int
-    cohort_start_date: date
+    cohort_start_date: Optional[date]
     cohort_end_date: Optional[date]
 ###===========Cohort Model====================###
 
@@ -127,7 +127,7 @@ class TemporalEventGroup(BaseModel):
             return ""
         start = self.interval[0] if self.interval[0] is not None else 0
         end = self.interval[1] if self.interval[1] is not None else 99999
-        return f"AND e2.event_date - e1.event_date BETWEEN {start} AND {end}"
+        return f"AND e2.event_start_date - e1.event_start_date BETWEEN {start} AND {end}"
 
 
 class ConditionCohortCriteria(BaseModel):
