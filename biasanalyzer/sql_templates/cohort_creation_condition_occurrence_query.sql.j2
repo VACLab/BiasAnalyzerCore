@@ -1,11 +1,19 @@
 {% extends "base.sql.j2" %}
 
-{% block inclusion_criteria %}
-{% if inclusion_criteria.demographics %}
-    {{ demographics_filter(inclusion_criteria.demographics) }}
-{% endif %}
+{% block inclusion_temporal_event_criteria %}
 {% if inclusion_criteria.temporal_events %}
     {{ temporal_event_filter(inclusion_criteria.temporal_events) }}
+{% else %}
+    SELECT person_id,
+           condition_start_date as event_start_date,
+           condition_end_date as event_end_date
+    FROM condition_occurrence
+{% endif %}
+{% endblock %}
+
+{% block inclusion_demographics_criteria %}
+{% if inclusion_criteria.demographics %}
+    {{ demographics_filter(inclusion_criteria.demographics) }}
 {% endif %}
 {% endblock %}
 
