@@ -1,0 +1,11 @@
+template_name: "cohort_creation_condition_occurrence_query"
+
+inclusion_criteria:
+  demographics:                     # Optional
+    gender: 'male'                  # accepted values: female or male, optional field
+    max_birth_year: 1990            # Born at the year of 1990 or before, optional field
+  temporal_events:
+    - operator: 'AND'
+      events:
+        - event_type: 'condition_occurrence'
+          event_concept_id: 316139  # heart failure

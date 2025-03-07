@@ -121,13 +121,13 @@ class TemporalEventGroup(BaseModel):
 
         return values
 
-    def get_interval_sql(self) -> str:
+    def get_interval_sql(self, e1_alias='e1', e2_alias='e2') -> str:
         """Generate SQL for the interval."""
         if not self.interval:
             return ""
         start = self.interval[0] if self.interval[0] is not None else 0
         end = self.interval[1] if self.interval[1] is not None else 99999
-        return f"AND e2.event_start_date - e1.event_start_date BETWEEN {start} AND {end}"
+        return f"AND {e2_alias}.event_start_date - {e1_alias}.event_start_date BETWEEN {start} AND {end}"
 
 
 class ConditionCohortCriteria(BaseModel):

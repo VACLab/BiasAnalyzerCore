@@ -1,0 +1,8 @@
+template_name: "cohort_creation_condition_occurrence_query"
+
+inclusion_criteria:
+  temporal_events:
+    - operator: 'AND'
+      events:
+        - event_type: 'condition_occurrence'
+          event_concept_id: 316139  # heart failure
