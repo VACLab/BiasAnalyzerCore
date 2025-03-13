@@ -218,12 +218,12 @@ class CohortQueryBuilder:
             str: SQL filter for temporal event selection.
         """
         filters = []
-        for event_group in event_groups:
+        for i, event_group in enumerate(event_groups):
             group_sql = self.render_event_group(event_group)
             if group_sql:
                 if alias == 'ex':
                     # exclusion criteria
-                    filters.append(f"AND {alias}.person_id IN (SELECT person_id FROM ({group_sql}))")
+                    filters.append(f"AND {alias}.person_id IN (SELECT person_id FROM ({group_sql}) AS ex_subquery_{i})")
                 else:
                     filters.append(f"({group_sql})")
         if not filters:

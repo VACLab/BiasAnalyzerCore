@@ -1,0 +1,27 @@
+template_name: "cohort_creation_condition_occurrence_query"
+
+inclusion_criteria:
+  demographics:                     # Optional
+    gender: 'female'                # accepted values: female or male, optional field
+  temporal_events:
+    # The operator AND event below captures a cohort of patients who have a COVID diagnosis
+    #  3/15/20-12/11/20 AND have at least one emergency room visit
+    - operator: 'AND'
+      events:
+        - event_type: 'visit_occurrence'
+          event_concept_id: 9203    # Emergency Room visit
+        # The operator BEFORE event below captures a COVID diagnosis between 3/15/20 and 12/11/20
+        - operator: 'AND'
+          events:
+          - operator: 'BEFORE'
+            events:
+              - event_type: date
+                timestamp: '2020-03-15'
+              - event_type: 'condition_occurrence'
+                event_concept_id: 37311061 # COVID condition
+          - operator: 'BEFORE'
+            events:
+              - event_type: 'condition_occurrence'
+                event_concept_id: 37311061 # COVID condition
+              - event_type: date
+                timestamp: '2020-12-11' # when the first COVID vaccine was given
