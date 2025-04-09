@@ -29,8 +29,6 @@ def test_load_cohort_creation_config():
         assert False, f"test_load_cohort_creation_config() raised an exception: {e}"
 
 
-    assert 'template_name' in config
-    assert config.get('template_name') == 'cohort_creation_condition_occurrence_query'
     assert 'inclusion_criteria' in config
     # assert 'exclusion_criteria' in config
     assert 'temporal_events' in config.get('inclusion_criteria')

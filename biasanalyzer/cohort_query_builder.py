@@ -5,6 +5,51 @@ from biasanalyzer.models import TemporalEventGroup
 from jinja2 import Environment, FileSystemLoader
 
 
+DOMAIN_MAPPING = {
+    "condition_occurrence": {
+        "table": "condition_occurrence",
+        "concept_id": "condition_concept_id",
+        "start_date": "condition_start_date",
+        "end_date": "condition_end_date",
+    },
+    "drug_exposure": {
+        "table": "drug_exposure",
+        "concept_id": "drug_concept_id",
+        "start_date": "drug_exposure_start_date",
+        "end_date": "drug_exposure_end_date",
+    },
+    "procedure_occurrence": {
+        "table": "procedure_occurrence",
+        "concept_id": "procedure_concept_id",
+        "start_date": "procedure_date",
+        "end_date": "procedure_date",
+    },
+    "visit_occurrence": {
+        "table": "visit_occurrence",
+        "concept_id": "visit_concept_id",
+        "start_date": "visit_start_date",
+        "end_date": "visit_end_date",
+    },
+    "measurement": {
+        "table": "measurement",
+        "concept_id": "measurement_concept_id",
+        "start_date": "measurement_date",
+        "end_date": "measurement_date",
+    },
+    "observation": {
+        "table": "observation",
+        "concept_id": "observation_concept_id",
+        "start_date": "observation_date",
+        "end_date": "observation_date",
+    },
+    # "date": {  # Special case for static timestamps
+    #     "table": None,
+    #     "concept_id": None,
+    #     "start_date": "timestamp",
+    #    "end_date": "timestamp",
+    # }
+}
+
 class CohortQueryBuilder:
     def __init__(self):
         """Get the path to SQL templates, whether running from source or installed."""
@@ -26,6 +71,15 @@ class CohortQueryBuilder:
             temporal_event_filter=self.temporal_event_filter
         )
 
+    def _extract_domains(self, events):
+        domains = set()
+        for event in events:
+            if "event_type" in event and event["event_type"] != "date":
+                domains.add(event["event_type"])
+            if "events" in event:
+                domains.update(self._extract_domains(event["events"]))
+        return domains
+
     def _load_macro(self, macro_name):
         """
         Load a macro from macros.sql.j2 into the Jinja2 environment.
@@ -44,13 +98,18 @@ class CohortQueryBuilder:
         Returns:
             str: The rendered SQL query.
         """
-        template_name = cohort_config.get('template_name')
         inclusion_criteria = cohort_config.get('inclusion_criteria')
         exclusion_criteria = cohort_config.get('exclusion_criteria', {})
-        template = self.env.get_template(f"{template_name}.sql.j2")
+        inclusion_events = inclusion_criteria.get("temporal_events", [])
+        exclusion_events = exclusion_criteria.get("temporal_events", [])
+        all_domains = self._extract_domains(inclusion_events + exclusion_events)
+        ranked_domains = {dt: DOMAIN_MAPPING[dt] for dt in all_domains if dt in DOMAIN_MAPPING}
+
+        template = self.env.get_template(f"cohort_creation_query.sql.j2")
         return template.render(
             inclusion_criteria=inclusion_criteria,
-            exclusion_criteria=exclusion_criteria
+            exclusion_criteria=exclusion_criteria,
+            ranked_domains=ranked_domains
         )
 
     @staticmethod
@@ -64,31 +123,17 @@ class CohortQueryBuilder:
         Returns:
             str: SQL query string for the event.
         """
-        event_sql = ""
+        domain = DOMAIN_MAPPING.get(event["event_type"])
+        if not domain or not domain["table"]:
+            return ""
 
-        if event["event_type"] == "condition_occurrence":
-            if "event_instance" in event and event["event_instance"] is not None:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']} "
-                    f"AND event_instance >= {event['event_instance']}"
-                )
-            else:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']}"
-                )
+        base_sql = f"SELECT person_id, event_start_date, event_end_date FROM ranked_events_{event['event_type']}"
+        conditions = [f"concept_id = {event['event_concept_id']}"]
+        if "event_instance" in event and event["event_instance"] is not None:
+            conditions.append(f"event_instance >= {event['event_instance']}")
 
-        elif event["event_type"] == "visit_occurrence":
-            if "event_instance" in event and event["event_instance"] is not None:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']} "
-                    f"AND event_instance >= {event['event_instance']}"
-                )
-            else:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']}"
-                )
+        return f"{base_sql} WHERE {' AND '.join(conditions)}"
 
-        return event_sql
 
     @staticmethod
     def render_event_group(event_group, alias_prefix="evt"):

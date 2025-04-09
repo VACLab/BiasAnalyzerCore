@@ -137,7 +137,6 @@ class ConditionCohortCriteria(BaseModel):
 
 class CohortCreationConfig(BaseModel):
     # SQL query template name
-    template_name: str
     # cohort creation criteria
     inclusion_criteria: ConditionCohortCriteria
     exclusion_criteria: Optional[ConditionCohortCriteria] = None

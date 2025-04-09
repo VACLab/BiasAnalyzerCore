@@ -1,5 +1,3 @@
-template_name: "cohort_creation_condition_occurrence_query"
-
 inclusion_criteria:
   demographics:                     # Optional
     gender: 'male'                # accepted values: female or male, optional field

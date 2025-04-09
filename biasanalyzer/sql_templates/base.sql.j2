@@ -11,7 +11,7 @@ ranked_visits AS (
         ) AS event_instance
     FROM visit_occurrence
 ),
-condition_qualifying_events AS (
+domain_qualifying_events AS (
     {% block inclusion_temporal_event_criteria %}
     {% endblock %}
 ),
@@ -19,7 +19,7 @@ filtered_cohort AS (
     SELECT c.person_id,
            MIN(c.event_start_date) AS cohort_start_date,
            MAX(c.event_end_date) AS cohort_end_date
-    FROM condition_qualifying_events c
+    FROM domain_qualifying_events c
     JOIN person p ON c.person_id = p.person_id
     WHERE 1=1
     {% block inclusion_demographics_criteria %}
