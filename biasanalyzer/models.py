@@ -3,6 +3,54 @@ from typing import Optional, Literal, List, Union
 from datetime import date
 
 
+DOMAIN_MAPPING = {
+    "condition_occurrence": {
+        "table": "condition_occurrence",
+        "concept_id": "condition_concept_id",
+        "start_date": "condition_start_date",
+        "end_date": "condition_end_date",
+    },
+    "drug_exposure": {
+        "table": "drug_exposure",
+        "concept_id": "drug_concept_id",
+        "start_date": "drug_exposure_start_date",
+        "end_date": "drug_exposure_end_date",
+    },
+    "procedure_occurrence": {
+        "table": "procedure_occurrence",
+        "concept_id": "procedure_concept_id",
+        "start_date": "procedure_date",
+        "end_date": "procedure_date",
+    },
+    "visit_occurrence": {
+        "table": "visit_occurrence",
+        "concept_id": "visit_concept_id",
+        "start_date": "visit_start_date",
+        "end_date": "visit_end_date",
+    },
+    "measurement": {
+        "table": "measurement",
+        "concept_id": "measurement_concept_id",
+        "start_date": "measurement_date",
+        "end_date": "measurement_date",
+    },
+    "observation": {
+        "table": "observation",
+        "concept_id": "observation_concept_id",
+        "start_date": "observation_date",
+        "end_date": "observation_date",
+    },
+    "date": {  # Special case for static timestamps
+        "table": None,
+        "concept_id": None,
+        "start_date": "timestamp",
+       "end_date": "timestamp",
+    }
+}
+
+EVENT_TYPE_LITERAL = Literal[tuple(DOMAIN_MAPPING.keys())]
+
+
 ###===========System Configuration==============###
 class RootOMOPCDM(BaseModel):
     model_config = ConfigDict(extra='ignore')
@@ -60,7 +108,8 @@ class DemographicsCriteria(BaseModel):
 
 
 class TemporalEvent(BaseModel):
-    event_type: Literal['condition_occurrence', 'visit_occurrence', 'date']
+    # Generate Literal type from DOMAIN_MAPPING keys
+    event_type: EVENT_TYPE_LITERAL
     event_concept_id: Optional[int] = None  # Optional for 'date' event_type
     event_instance: Optional[int] = None  # Optional: Specific occurrence (e.g., 2nd hospitalization)
     timestamp: Optional[str] = None

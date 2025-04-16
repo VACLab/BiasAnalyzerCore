@@ -1,0 +1,44 @@
+inclusion_criteria:
+  demographics:
+    gender: 'female'                # Restrict to female patients
+    min_birth_year: 1970           # Born on or after 1970
+    max_birth_year: 2000           # Born on or before 2000
+  temporal_events:
+    # Patients must meet ALL of these criteria
+    - operator: 'AND'
+      events:
+        - operator: 'OR'
+          events:
+            - event_type: 'visit_occurrence'
+              event_concept_id: 9202      # Outpatient visit
+              event_instance: 1           # At least one occurrence
+            - event_type: 'visit_occurrence'
+              event_concept_id: 9203      # Emergency room visit
+              event_instance: 1
+
+        # Drug: Received insulin within 30 days after diabetes diagnosis
+        - operator: 'BEFORE'
+          interval: [0, 30]            # Insulin prescribed 0-30 days after diagnosis
+          events:
+            - event_type: 'condition_occurrence'
+              event_concept_id: 201826    # Diabetes diagnosis
+            - event_type: 'drug_exposure'
+              event_concept_id: 4285892  # Insulin
+
+        # Procedure: Blood test before a specific date
+        - operator: 'BEFORE'
+          events:
+            - event_type: 'procedure_occurrence'
+              event_concept_id: 4048609   # Blood test (example OMOP concept ID)
+            - event_type: date
+              timestamp: '2020-12-31'     # Before end of 2020
+
+exclusion_criteria:
+  demographics:
+    min_birth_year: 1995            # Exclude patients born after 1995
+  temporal_events:
+    # Exclude patients who had a specific procedure (e.g., cardiac surgery)
+    - operator: 'AND'
+      events:
+        - event_type: 'procedure_occurrence'
+          event_concept_id: 619339     # Cardiac surgery (Repair of congenital malformation of heart valve)

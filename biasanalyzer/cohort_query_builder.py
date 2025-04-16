@@ -1,54 +1,9 @@
 import os
 import sys
 import importlib.resources
-from biasanalyzer.models import TemporalEventGroup
+from biasanalyzer.models import TemporalEventGroup, DOMAIN_MAPPING
 from jinja2 import Environment, FileSystemLoader
 
-
-DOMAIN_MAPPING = {
-    "condition_occurrence": {
-        "table": "condition_occurrence",
-        "concept_id": "condition_concept_id",
-        "start_date": "condition_start_date",
-        "end_date": "condition_end_date",
-    },
-    "drug_exposure": {
-        "table": "drug_exposure",
-        "concept_id": "drug_concept_id",
-        "start_date": "drug_exposure_start_date",
-        "end_date": "drug_exposure_end_date",
-    },
-    "procedure_occurrence": {
-        "table": "procedure_occurrence",
-        "concept_id": "procedure_concept_id",
-        "start_date": "procedure_date",
-        "end_date": "procedure_date",
-    },
-    "visit_occurrence": {
-        "table": "visit_occurrence",
-        "concept_id": "visit_concept_id",
-        "start_date": "visit_start_date",
-        "end_date": "visit_end_date",
-    },
-    "measurement": {
-        "table": "measurement",
-        "concept_id": "measurement_concept_id",
-        "start_date": "measurement_date",
-        "end_date": "measurement_date",
-    },
-    "observation": {
-        "table": "observation",
-        "concept_id": "observation_concept_id",
-        "start_date": "observation_date",
-        "end_date": "observation_date",
-    },
-    # "date": {  # Special case for static timestamps
-    #     "table": None,
-    #     "concept_id": None,
-    #     "start_date": "timestamp",
-    #    "end_date": "timestamp",
-    # }
-}
 
 class CohortQueryBuilder:
     def __init__(self):
@@ -160,26 +115,28 @@ class CohortQueryBuilder:
             if event_group["operator"] == "AND":
                 if len(queries) == 1:
                     return queries[0]
-                base_query = queries[0]
+                # First, get person_ids that satisfy all conditions
+                person_id_sql = f"""
+                    SELECT a.person_id
+                    FROM ({queries[0]}) AS a"""
+                for i, query in enumerate(queries[1:], 1):
+                    person_id_sql += f"""
+                        JOIN (
+                            SELECT DISTINCT person_id
+                            FROM ({query}) AS b{i}
+                        ) AS b{i}
+                        ON a.person_id = b{i}.person_id
+                    """
+                # Then, union all events for qualifying person_ids
                 combined_sql = f"""
-                                SELECT a.person_id, a.event_start_date, a.event_end_date
-                                FROM ({base_query}) AS a"""
-                for i, query in enumerate(queries[1:], 1):
-                    combined_sql += f"""
-                                        JOIN (
-                                            SELECT person_id
-                                            FROM ({query}) AS b{i}
-                                        ) AS b{i}
-                                        ON a.person_id = b{i}.person_id
-                                    """
-                for i, query in enumerate(queries[1:], 1):
-                    combined_sql += f"""
-                                    UNION ALL
-                                    SELECT b{i}.person_id, b{i}.event_start_date, b{i}.event_end_date
-                                    FROM ({query}) AS b{i}
-                                    JOIN ({base_query}) AS a{i}
-                                    ON b{i}.person_id = a{i}.person_id
-                                """
+                    SELECT person_id, event_start_date, event_end_date
+                    FROM (
+                        {' UNION ALL '.join(f'({q})' for q in queries)}
+                    ) AS all_events
+                    WHERE person_id IN (
+                        {person_id_sql}
+                    )
+                """
                 return combined_sql
 
             elif event_group["operator"] == "OR":

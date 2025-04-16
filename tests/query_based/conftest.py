@@ -62,6 +62,16 @@ def test_db():
                 );
             """)
 
+    conn.execute("""
+                    CREATE TABLE IF NOT EXISTS procedure_occurrence (
+                        person_id INTEGER,
+                        procedure_occurrence_id INTEGER PRIMARY KEY,
+                        procedure_concept_id INTEGER,
+                        procedure_date DATE
+                    );
+                """)
+
+
     # Insert mock data as needed
     result = conn.execute("SELECT COUNT(*) FROM person").fetchone()
     if result[0] == 0:
@@ -79,7 +89,13 @@ def test_db():
                     (109, 8507, 8515, 38003563, 2003), -- Male, Black, Hispanic
                     (110, 8532, 8516, 38003563, 2004), -- Female, Asian, Hispanic
                     (111, 8532, 8516, 38003564, 2011), -- Female, Asian, Non-Hispanic
-                    (112, 8532, 8527, 38003564, 2012); -- Female, White, Non-Hispanic
+                    (112, 8532, 8527, 38003564, 2012), -- Female, White, Non-Hispanic
+                    -- for mixed domain testing
+                    (1, 8532, 0, 0, 1980),  -- Female, qualifying
+                    (2, 8532, 0, 0, 1996),  -- Female, qualifying, not excluded due to not having cardiac surgery
+                    (3, 8532, 0, 0, 1996),  -- Female, has cardiac surgery
+                    (4, 8507, 0, 0, 1980),  -- Male, wrong gender
+                    (5, 8532, 0, 0, 1980);  -- Female, missing insulin
             """)
 
     # Insert mock concepts as needed
@@ -148,10 +164,16 @@ def test_db():
                     (111, 4041664, '2020-04-10', '2020-04-17'), -- Patient 108 has difficulty breathing
                     (111, 37311061, '2020-05-13', '2020-05-27'), -- Patient 108 has COVID-19
                     (111, 316139, '2020-06-14', '2020-06-27'), -- Patient 111 has heart failure
-                    (112, 316139, '2020-07-14', '2020-07-27'); -- Patient 112 has heart failure
+                    (112, 316139, '2020-07-14', '2020-07-27'), -- Patient 112 has heart failure
+                    -- for mixed domain testing
+                    (1, 201826, '2020-06-01', '2020-06-01'),  -- Person 1: Diabetes
+                    (2, 201826, '2020-06-01', '2020-06-01'),  -- Person 2: Diabetes
+                    (3, 201826, '2020-06-01', '2020-06-01'),  -- Person 3: Diabetes
+                    (4, 201826, '2020-06-01', '2020-06-01'),  -- Person 4: Diabetes
+                    (5, 201826, '2020-06-01', '2020-06-01');  -- Person 5: Diabetes
             """)
 
-        # Insert mock visit data
+    # Insert mock visit data
     result = conn.execute("SELECT COUNT(*) FROM visit_occurrence").fetchone()
     if result[0] == 0:
         conn.execute("""
@@ -163,8 +185,42 @@ def test_db():
                         (110, 4, 9201, '2020-05-16', '2020-05-27'), -- Inpatient visit but only one occurrence
                         (110, 5, 9203, '2020-05-16', '2020-05-16'), -- Single emergency room visit (meets criteria)
                         (111, 6, 9203, '2020-06-13', '2020-06-13'), -- Single emergency room visit (meets criteria)
-                        (112, 7, 9203, '2020-07-13', '2020-07-13'); -- Single emergency room visit (meets criteria)
+                        (112, 7, 9203, '2020-07-13', '2020-07-13'), -- Single emergency room visit (meets criteria)
+                        -- for mixed domain testing
+                        (1, 8, 9202, '2020-06-10', '2020-06-10'),  -- Person 1: Outpatient
+                        (2, 9, 9202, '2020-06-10', '2020-06-10'),  -- Person 2: Outpatient
+                        (3, 10, 9202, '2020-06-10', '2020-06-10'),  -- Person 3: Outpatient
+                        (4, 11, 9202, '2020-06-10', '2020-06-10'),  -- Person 4: Outpatient
+                        (5, 12, 9202, '2020-06-10', '2020-06-10');  -- Person 5: Outpatient
                 """)
+
+        # Insert mock procedure_occurrence data for mixed domain testing
+        result = conn.execute("SELECT COUNT(*) FROM procedure_occurrence").fetchone()
+        if result[0] == 0:
+            conn.execute("""
+                        INSERT INTO procedure_occurrence (person_id, procedure_occurrence_id, procedure_concept_id, procedure_date)
+                        VALUES 
+                            (1, 1, 4048609, '2020-06-20'),  -- Person 1: Blood test
+                            (2, 2, 4048609, '2020-06-20'),  -- Person 2: Blood test
+                            (3, 3, 4048609, '2020-06-20'),  -- Person 3: Blood test
+                            (3, 4, 619339, '2020-06-25'),  -- Person 3: Cardiac surgery (exclusion)
+                            (4, 5, 4048609, '2020-06-20'),  -- Person 4: Blood test
+                            (5, 6, 4048609, '2020-06-20');  -- Person 5: Blood test
+                    """)
+
+        # Insert mock procedure_occurrence data for mixed domain testing
+        result = conn.execute("SELECT COUNT(*) FROM drug_exposure").fetchone()
+        if result[0] == 0:
+            conn.execute("""
+                            INSERT INTO drug_exposure (person_id, drug_concept_id, drug_exposure_start_date, drug_exposure_end_date)
+                            VALUES 
+                                (1, 4285892, '2020-06-15', '2020-06-15'),  -- Person 1: Insulin 14 days after
+                                (2, 4285892, '2020-06-15', '2020-06-15'),  -- Person 2: Insulin
+                                (3, 4285892, '2020-06-15', '2020-06-15'),  -- Person 3: Insulin
+                                (4, 4285892, '2020-06-15', '2020-06-15');  -- Person 4: Insulin
+                                -- Person 5: No insulin
+                        """)
+
 
     # mock configuration file
     bias = BIAS()
