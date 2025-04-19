@@ -1,6 +1,6 @@
 import pytest
 import os
-
+import datetime
 from numpy.ma.testutils import assert_equal
 
 
@@ -90,3 +90,38 @@ def test_cohort_creation_all(test_db):
     print(f'patient_ids: {patient_ids}', flush=True)
     assert_equal(len(patient_ids), 2)
     assert_equal(patient_ids, {108, 110})
+
+@pytest.mark.usefixtures
+def test_cohort_creation_mixed_domains(test_db):
+    """
+    Test cohort creation with mixed domains (condition, drug, visit, procedure).
+    """
+    bias = test_db
+    cohort = bias.create_cohort(
+        "Female diabetes patients born between 1970 and 2000",
+        "Cohort of female patients with diabetes who had insulin prescribed 0-30 days after diagnosis "
+        "and have at least one outpatient or emergency visit and underwent a blood test before 12/31/2020, "
+        "with patients born after 1995 and with cardiac surgery excluded",
+        os.path.join(os.path.dirname(__file__), '..', 'assets', 'cohort_creation',
+                     'test_cohort_creation_config.yaml'),
+        "test_user"
+    )
+
+    # Test cohort object and methods
+    assert cohort is not None, "Cohort creation failed"
+    print(f'metadata: {cohort.metadata}')
+    assert cohort.metadata is not None, "Cohort creation wrongly returned None metadata"
+    assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
+    stats = cohort.get_stats()
+    assert stats is not None, "Created cohort's stats is None"
+    assert cohort.data is not None, "Cohort creation wrongly returned None data"
+    patient_ids = set([item['subject_id'] for item in cohort.data])
+    print(f'patient_ids: {patient_ids}', flush=True)
+    assert_equal(len(patient_ids), 2)
+    assert_equal(patient_ids, {1, 2})
+    start_dates = [item['cohort_start_date'] for item in cohort.data]
+    assert_equal(len(start_dates), 2)
+    assert_equal(start_dates, [datetime.date(2020, 6, 1), datetime.date(2020, 6, 1)])
+    end_dates = [item['cohort_end_date'] for item in cohort.data]
+    assert_equal(len(end_dates), 2)
+    assert_equal(end_dates, [datetime.date(2020, 6, 20), datetime.date(2020, 6, 20)])

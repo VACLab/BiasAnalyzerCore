@@ -1,26 +1,31 @@
 {% extends "base.sql.j2" %}
 {% block domain_events %}
-WITH ranked_events AS (
+WITH
+{% for domain_type, domain in ranked_domains.items() %}
+ranked_events_{{ domain_type }} AS (
     SELECT
         person_id,
-        condition_concept_id,
-        condition_start_date AS event_start_date,
-        condition_end_date AS event_end_date,
+        {{ domain.concept_id }} AS concept_id,
+        {{ domain.start_date }} AS event_start_date,
+        {{ domain.end_date }} AS event_end_date,
         ROW_NUMBER() OVER (
-            PARTITION BY person_id, condition_concept_id
-            ORDER BY condition_start_date ASC
+            PARTITION BY person_id, {{ domain.concept_id }}
+            ORDER BY {{ domain.start_date }} ASC
         ) AS event_instance
-    FROM condition_occurrence
-),
+    FROM {{ domain.table }}
+){% if not loop.last %},{% endif %}
+{% endfor %}
+{% if ranked_domains %},{% endif %}
 {% endblock %}
+
 {% block inclusion_temporal_event_criteria %}
 {% if inclusion_criteria.temporal_events %}
     {{ temporal_event_filter(inclusion_criteria.temporal_events) }}
 {% else %}
     SELECT person_id,
-           condition_start_date as event_start_date,
-           condition_end_date as event_end_date
-    FROM condition_occurrence
+           NULL AS event_start_date,
+           NULL AS event_end_date,
+    FROM person p
 {% endif %}
 {% endblock %}
 

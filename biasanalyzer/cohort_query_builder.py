@@ -1,7 +1,7 @@
 import os
 import sys
 import importlib.resources
-from biasanalyzer.models import TemporalEventGroup
+from biasanalyzer.models import TemporalEventGroup, DOMAIN_MAPPING
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -26,6 +26,15 @@ class CohortQueryBuilder:
             temporal_event_filter=self.temporal_event_filter
         )
 
+    def _extract_domains(self, events):
+        domains = set()
+        for event in events:
+            if "event_type" in event and event["event_type"] != "date":
+                domains.add(event["event_type"])
+            if "events" in event:
+                domains.update(self._extract_domains(event["events"]))
+        return domains
+
     def _load_macro(self, macro_name):
         """
         Load a macro from macros.sql.j2 into the Jinja2 environment.
@@ -44,13 +53,18 @@ class CohortQueryBuilder:
         Returns:
             str: The rendered SQL query.
         """
-        template_name = cohort_config.get('template_name')
         inclusion_criteria = cohort_config.get('inclusion_criteria')
         exclusion_criteria = cohort_config.get('exclusion_criteria', {})
-        template = self.env.get_template(f"{template_name}.sql.j2")
+        inclusion_events = inclusion_criteria.get("temporal_events", [])
+        exclusion_events = exclusion_criteria.get("temporal_events", [])
+        all_domains = self._extract_domains(inclusion_events + exclusion_events)
+        ranked_domains = {dt: DOMAIN_MAPPING[dt] for dt in all_domains if dt in DOMAIN_MAPPING}
+
+        template = self.env.get_template(f"cohort_creation_query.sql.j2")
         return template.render(
             inclusion_criteria=inclusion_criteria,
-            exclusion_criteria=exclusion_criteria
+            exclusion_criteria=exclusion_criteria,
+            ranked_domains=ranked_domains
         )
 
     @staticmethod
@@ -64,31 +78,17 @@ class CohortQueryBuilder:
         Returns:
             str: SQL query string for the event.
         """
-        event_sql = ""
+        domain = DOMAIN_MAPPING.get(event["event_type"])
+        if not domain or not domain["table"]:
+            return ""
 
-        if event["event_type"] == "condition_occurrence":
-            if "event_instance" in event and event["event_instance"] is not None:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']} "
-                    f"AND event_instance >= {event['event_instance']}"
-                )
-            else:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_events WHERE condition_concept_id = {event['event_concept_id']}"
-                )
+        base_sql = f"SELECT person_id, event_start_date, event_end_date FROM ranked_events_{event['event_type']}"
+        conditions = [f"concept_id = {event['event_concept_id']}"]
+        if "event_instance" in event and event["event_instance"] is not None:
+            conditions.append(f"event_instance >= {event['event_instance']}")
 
-        elif event["event_type"] == "visit_occurrence":
-            if "event_instance" in event and event["event_instance"] is not None:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']} "
-                    f"AND event_instance >= {event['event_instance']}"
-                )
-            else:
-                event_sql = (
-                    f"SELECT person_id, event_start_date, event_end_date FROM ranked_visits WHERE visit_concept_id = {event['event_concept_id']}"
-                )
+        return f"{base_sql} WHERE {' AND '.join(conditions)}"
 
-        return event_sql
 
     @staticmethod
     def render_event_group(event_group, alias_prefix="evt"):
@@ -115,26 +115,28 @@ class CohortQueryBuilder:
             if event_group["operator"] == "AND":
                 if len(queries) == 1:
                     return queries[0]
-                base_query = queries[0]
+                # First, get person_ids that satisfy all conditions
+                person_id_sql = f"""
+                    SELECT a.person_id
+                    FROM ({queries[0]}) AS a"""
+                for i, query in enumerate(queries[1:], 1):
+                    person_id_sql += f"""
+                        JOIN (
+                            SELECT DISTINCT person_id
+                            FROM ({query}) AS b{i}
+                        ) AS b{i}
+                        ON a.person_id = b{i}.person_id
+                    """
+                # Then, union all events for qualifying person_ids
                 combined_sql = f"""
-                                SELECT a.person_id, a.event_start_date, a.event_end_date
-                                FROM ({base_query}) AS a"""
-                for i, query in enumerate(queries[1:], 1):
-                    combined_sql += f"""
-                                        JOIN (
-                                            SELECT person_id
-                                            FROM ({query}) AS b{i}
-                                        ) AS b{i}
-                                        ON a.person_id = b{i}.person_id
-                                    """
-                for i, query in enumerate(queries[1:], 1):
-                    combined_sql += f"""
-                                    UNION ALL
-                                    SELECT b{i}.person_id, b{i}.event_start_date, b{i}.event_end_date
-                                    FROM ({query}) AS b{i}
-                                    JOIN ({base_query}) AS a{i}
-                                    ON b{i}.person_id = a{i}.person_id
-                                """
+                    SELECT person_id, event_start_date, event_end_date
+                    FROM (
+                        {' UNION ALL '.join(f'({q})' for q in queries)}
+                    ) AS all_events
+                    WHERE person_id IN (
+                        {person_id_sql}
+                    )
+                """
                 return combined_sql
 
             elif event_group["operator"] == "OR":
