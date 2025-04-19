@@ -86,11 +86,6 @@ class Cohort(BaseModel):
 ###===========Cohort Model====================###
 
 ###=========CohortCreationConfig==================###
-class ConditionCriteria(BaseModel):
-    # SNOMED Condition concept ID in OMOP (e.g., 37311061 for COVID-19)
-    condition_concept_id: int
-
-
 class DemographicsCriteria(BaseModel):
     # Gender with "male" and "female" as valid input
     gender: Optional[Literal['male', 'female']] = None
@@ -179,7 +174,7 @@ class TemporalEventGroup(BaseModel):
         return f"AND {e2_alias}.event_start_date - {e1_alias}.event_start_date BETWEEN {start} AND {end}"
 
 
-class ConditionCohortCriteria(BaseModel):
+class CohortCreationCriteria(BaseModel):
     demographics: Optional[DemographicsCriteria] = None  # Optional
     temporal_events: Optional[List[TemporalEventGroup]] = None  # List of temporal event operators
 
@@ -187,6 +182,6 @@ class ConditionCohortCriteria(BaseModel):
 class CohortCreationConfig(BaseModel):
     # SQL query template name
     # cohort creation criteria
-    inclusion_criteria: ConditionCohortCriteria
-    exclusion_criteria: Optional[ConditionCohortCriteria] = None
+    inclusion_criteria: CohortCreationCriteria
+    exclusion_criteria: Optional[CohortCreationCriteria] = None
 ###=========CohortCreationConfig==================###
