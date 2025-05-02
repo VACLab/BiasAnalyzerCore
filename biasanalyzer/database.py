@@ -119,6 +119,15 @@ class BiasDatabase:
             cohort.cohort_end_date
         ))
 
+    # Method to insert cohort data in bulk from a dataframe
+    def create_cohort_in_bulk(self, cohort_df: pd.DataFrame):
+        # make duckdb to treat cohort_df dataframe as a virtual table named "cohort_df"
+        self.conn.register("cohort_df", cohort_df)
+        self.conn.execute('''
+            INSERT INTO cohort (subject_id, cohort_definition_id, cohort_start_date, cohort_end_date)
+            SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM cohort_df
+        ''')
+
     def get_cohort_definition(self, cohort_definition_id):
         results = self.conn.execute(f'''
         SELECT id, name, description, created_date, creation_info, created_by FROM cohort_definition 
@@ -417,12 +426,8 @@ class OMOPCDMDatabase:
 
         results = self.execute_query(query, params={"concept_id": concept_id})
 
-        # Collect all concept IDs involved in the hierarchy
-        concept_ids = set()
-        for row in results:
-            concept_ids.add(row['ancestor_concept_id'])
-            concept_ids.add(row['descendant_concept_id'])
-
+        # Collect all unique concept IDs involved in the hierarchy using set comprehension
+        concept_ids = {row['ancestor_concept_id'] for row in results} | {row['descendant_concept_id'] for row in results}
         # Fetch details of each concept
         concept_details = {}
         if concept_ids:
@@ -442,19 +447,17 @@ class OMOPCDMDatabase:
             ancestor_id = row['ancestor_concept_id']
             descendant_id = row['descendant_concept_id']
 
-            if ancestor_id not in hierarchy:
-                hierarchy[ancestor_id] = {"details": concept_details[ancestor_id], "children": []}
-            if descendant_id not in hierarchy:
-                hierarchy[descendant_id] = {"details": concept_details[descendant_id], "children": []}
-            # Link descendants to their ancestor node
-            hierarchy[ancestor_id]["children"].append(hierarchy[descendant_id])
+            ancestor_entry = hierarchy.setdefault(
+                ancestor_id, {"details": concept_details[ancestor_id], "children": []})
+            descendant_entry = hierarchy.setdefault(
+                descendant_id, {"details": concept_details[descendant_id], "children": []})
+            ancestor_entry["children"].append(descendant_entry)
 
-            if descendant_id not in reverse_hierarchy:
-                reverse_hierarchy[descendant_id] = {"details": concept_details[descendant_id], "parents": []}
-            if ancestor_id not in reverse_hierarchy:
-                reverse_hierarchy[ancestor_id] = {"details": concept_details[ancestor_id], "parents": []}
-            # Link ancestors to their descendant (child) node
-            reverse_hierarchy[descendant_id]["parents"].append(reverse_hierarchy[ancestor_id])
+            desc_entry_rev = reverse_hierarchy.setdefault(
+                descendant_id, {"details": concept_details[descendant_id], "parents": []})
+            ancestor_entry_rev = reverse_hierarchy.setdefault(
+                ancestor_id, {"details": concept_details[ancestor_id], "parents": []})
+            desc_entry_rev["parents"].append(ancestor_entry_rev)
 
         # Return the parent hierarchy and children hierarchy of the specified concept
         return reverse_hierarchy[concept_id], hierarchy[concept_id]
