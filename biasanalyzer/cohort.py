@@ -1,5 +1,6 @@
 from sqlalchemy.exc import SQLAlchemyError
 import duckdb
+import pandas as pd
 from datetime import datetime
 from pydantic import ValidationError
 from biasanalyzer.models import CohortDefinition, Cohort
@@ -110,14 +111,10 @@ class CohortAction:
             cohort_def_id = self.bias_db.create_cohort_definition(cohort_def)
 
             # Store cohort_definition and cohort data into BiasDatabase
-            for row in result:
-                cohort = Cohort(
-                    subject_id=int(row['person_id']),  # Assuming person_id column in the result
-                    cohort_definition_id=cohort_def_id,
-                    cohort_start_date=row['cohort_start_date'],
-                    cohort_end_date=row['cohort_end_date']
-                )
-                self.bias_db.create_cohort(cohort)
+            cohort_df = pd.DataFrame(result)
+            cohort_df['cohort_definition_id'] = cohort_def_id
+            cohort_df = cohort_df.rename(columns={"person_id": "subject_id"})
+            self.bias_db.create_cohort_in_bulk(cohort_df)
             print(f"Cohort {cohort_name} successfully created.")
             return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
         except duckdb.Error as e:
