@@ -2,6 +2,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import duckdb
 import pandas as pd
 from datetime import datetime
+from tqdm import tqdm
 from pydantic import ValidationError
 from biasanalyzer.models import CohortDefinition, Cohort
 from biasanalyzer.config import load_cohort_creation_config
@@ -79,10 +80,18 @@ class CohortAction:
         and storing the result in BiasDatabase. The query can be passed in directly
         or built from a yaml file using a corresponding SQL query template
         """
+        stages = [
+            "Built query",
+            "Executed query on OMOP database to get cohort data",
+            "Inserted cohort data into DuckDB - Done"
+        ]
+        progress = tqdm(total=len(stages), desc="Cohort creation", unit="stage", dynamic_ncols=True, leave=True)
+
+        progress.set_postfix_str(stages[0])
         if query_or_yaml_file.endswith('.yaml') or query_or_yaml_file.endswith('.yml'):
             try:
                 cohort_config = load_cohort_creation_config(query_or_yaml_file)
-                print(f'configuration specified in {query_or_yaml_file} loaded successfully')
+                tqdm.write(f'configuration specified in {query_or_yaml_file} loaded successfully')
             except FileNotFoundError:
                 print('specified cohort creation configuration file does not exist. Make sure '
                       'the configuration file name with path is specified correctly.')
@@ -95,7 +104,9 @@ class CohortAction:
             query = self._query_builder.build_query(cohort_config)
         else:
             query = clean_string(query_or_yaml_file)
+        progress.update(1)
 
+        progress.set_postfix_str(stages[1])
         omop_session = self.omop_db.get_session()
         try:
             # Execute read-only query from OMOP CDM database
@@ -108,14 +119,18 @@ class CohortAction:
                 creation_info=clean_string(query),
                 created_by=created_by
             )
-            cohort_def_id = self.bias_db.create_cohort_definition(cohort_def)
+            cohort_def_id = self.bias_db.create_cohort_definition(cohort_def, progress_obj=tqdm)
+            progress.update(1)
 
+            progress.set_postfix_str(stages[2])
             # Store cohort_definition and cohort data into BiasDatabase
             cohort_df = pd.DataFrame(result)
             cohort_df['cohort_definition_id'] = cohort_def_id
             cohort_df = cohort_df.rename(columns={"person_id": "subject_id"})
             self.bias_db.create_cohort_in_bulk(cohort_df)
-            print(f"Cohort {cohort_name} successfully created.")
+            progress.update(1)
+
+            tqdm.write(f"Cohort {cohort_name} successfully created.")
             return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
         except duckdb.Error as e:
             print(f"Error executing query: {e}")
