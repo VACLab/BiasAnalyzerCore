@@ -2,6 +2,7 @@ import duckdb
 import pandas as pd
 from typing import Optional
 from datetime import datetime
+from tqdm.auto import tqdm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
@@ -91,7 +92,7 @@ class BiasDatabase:
         self.conn.execute("INSTALL postgres_scanner;")
         self.conn.execute("LOAD postgres_scanner;")
 
-    def create_cohort_definition(self, cohort_definition: CohortDefinition):
+    def create_cohort_definition(self, cohort_definition: CohortDefinition, progress_obj=None):
         self.conn.execute('''
             INSERT INTO cohort_definition (name, description, created_date, creation_info, created_by)
             VALUES (?, ?, ?, ?, ?)
@@ -102,7 +103,10 @@ class BiasDatabase:
             cohort_definition.creation_info,
             cohort_definition.created_by
         ))
-        print("Cohort definition inserted successfully.")
+        if progress_obj is None:
+            print("Cohort definition inserted successfully.")
+        else:
+            progress_obj.write("Cohort definition inserted successfully.")
         self.conn.execute("SELECT id from cohort_definition ORDER BY id DESC LIMIT 1")
         created_cohort_id = self.conn.fetchone()[0]
         return created_cohort_id
@@ -407,6 +411,14 @@ class OMOPCDMDatabase:
         Retrieves the full concept hierarchy (ancestors and descendants) for a given concept_id
         and organizes it into a nested dictionary to represent the tree structure.
         """
+        stages = [
+            "Queried concept hierarchy",
+            "Fetched concept details",
+            "Built hierarchy tree"
+        ]
+        progress = tqdm(total=len(stages), desc="Concept Hierarchy", unit="stage")
+
+        progress.set_postfix_str(stages[0])
         query = """
                 WITH RECURSIVE concept_hierarchy AS (
                     SELECT ancestor_concept_id, descendant_concept_id, min_levels_of_separation
@@ -425,7 +437,9 @@ class OMOPCDMDatabase:
                 """
 
         results = self.execute_query(query, params={"concept_id": concept_id})
+        progress.update(1)
 
+        progress.set_postfix_str(stages[1])
         # Collect all unique concept IDs involved in the hierarchy using set comprehension
         concept_ids = {row['ancestor_concept_id'] for row in results} | {row['descendant_concept_id'] for row in results}
         # Fetch details of each concept
@@ -439,7 +453,9 @@ class OMOPCDMDatabase:
 
             result = self.execute_query(query, params={"concept_ids": tuple(concept_ids)})
             concept_details = {row['concept_id']: row for row in result}
+        progress.update(1)
 
+        progress.set_postfix_str(stages[2])
         # Build the hierarchy tree using a dictionary
         hierarchy = {}
         reverse_hierarchy = {}
@@ -458,6 +474,7 @@ class OMOPCDMDatabase:
             ancestor_entry_rev = reverse_hierarchy.setdefault(
                 ancestor_id, {"details": concept_details[ancestor_id], "parents": []})
             desc_entry_rev["parents"].append(ancestor_entry_rev)
+        progress.update(1)
 
         # Return the parent hierarchy and children hierarchy of the specified concept
         return reverse_hierarchy[concept_id], hierarchy[concept_id]
