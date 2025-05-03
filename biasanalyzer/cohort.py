@@ -2,7 +2,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import duckdb
 import pandas as pd
 from datetime import datetime
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from pydantic import ValidationError
 from biasanalyzer.models import CohortDefinition, Cohort
 from biasanalyzer.config import load_cohort_creation_config
