@@ -24,7 +24,7 @@ ranked_events_{{ domain_type }} AS (
 {% else %}
     SELECT person_id,
            NULL AS event_start_date,
-           NULL AS event_end_date,
+           NULL AS event_end_date
     FROM person p
 {% endif %}
 {% endblock %}
