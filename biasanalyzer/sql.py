@@ -2,7 +2,14 @@
 
 AGE_DISTRIBUTION_QUERY = '''
     WITH Age_Cohort AS (
-        SELECT p.person_id, EXTRACT(YEAR FROM c.cohort_start_date) - p.year_of_birth AS age 
+        SELECT p.person_id, 
+               EXTRACT(YEAR FROM
+                   COALESCE(
+                       c.cohort_end_date,
+                       c.cohort_start_date,
+                       CURRENT_DATE
+                   )
+                ) - p.year_of_birth AS age 
         FROM cohort c JOIN person p ON c.subject_id = p.person_id
         WHERE c.cohort_definition_id = {}
         ),
