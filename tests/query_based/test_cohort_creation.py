@@ -20,9 +20,24 @@ def test_cohort_creation_baseline(test_db):
     assert cohort.metadata is not None, "Cohort creation wrongly returned None metadata"
     assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
+    print(f'baseline cohort data: {cohort.data}', flush=True)
     patient_ids = set([item['subject_id'] for item in cohort.data])
     assert_equal(len(patient_ids), 5)
     assert_equal(patient_ids, {106, 108, 110, 111, 112})
+    # select two patients to check for cohort_start_date and cohort_end_date automatically computed
+    patient_106 = next(item for item in cohort.data if item['subject_id'] == 106)
+    patient_108 = next(item for item in cohort.data if item['subject_id'] == 108)
+
+    # Replace dates with actual values from your test data
+    assert_equal(patient_106['cohort_start_date'], datetime.date(2023, 3, 1),
+                 "Incorrect cohort_start_date for patient 106")
+    assert_equal(patient_106['cohort_end_date'], datetime.date(2023, 3, 15),
+                 "Incorrect cohort_end_date for patient 106")
+    assert_equal(patient_108['cohort_start_date'], datetime.date(2020, 4, 10),
+                 "Incorrect cohort_start_date for patient 108")
+    assert_equal(patient_108['cohort_end_date'], datetime.date(2020, 4, 27),
+                 "Incorrect cohort_end_date for patient 108")
+
 
 @pytest.mark.usefixtures
 def test_cohort_creation_study(test_db):

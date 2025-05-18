@@ -1,7 +1,9 @@
 {% extends "base.sql.j2" %}
 {% block domain_events %}
+{% if ranked_domains %}
 WITH
 {% for domain_type, domain in ranked_domains.items() %}
+{% if domain.table %}
 ranked_events_{{ domain_type }} AS (
     SELECT
         person_id,
@@ -13,18 +15,17 @@ ranked_events_{{ domain_type }} AS (
             ORDER BY {{ domain.start_date }} ASC
         ) AS event_instance
     FROM {{ domain.table }}
-){% if not loop.last %},{% endif %}
+),
+{% endif %}
 {% endfor %}
-{% if ranked_domains %},{% endif %}
+{% endif %}
 {% endblock %}
 
 {% block inclusion_temporal_event_criteria %}
 {% if inclusion_criteria.temporal_events %}
     {{ temporal_event_filter(inclusion_criteria.temporal_events) }}
 {% else %}
-    SELECT person_id,
-           NULL AS event_start_date,
-           NULL AS event_end_date
+    SELECT person_id
     FROM person p
 {% endif %}
 {% endblock %}

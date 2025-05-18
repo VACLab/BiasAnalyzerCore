@@ -70,7 +70,24 @@ def test_db():
                         procedure_date DATE
                     );
                 """)
-
+    conn.execute("""
+                 CREATE TABLE IF NOT EXISTS measurement
+                 (
+                     person_id INTEGER,
+                     measurement_id INTEGER PRIMARY KEY,
+                     measurement_concept_id INTEGER,
+                     measurement_date DATE
+                 );
+                 """)
+    conn.execute("""
+                 CREATE TABLE IF NOT EXISTS observation
+                 (
+                     person_id INTEGER,
+                     observation_id INTEGER PRIMARY KEY,
+                     observation_concept_id INTEGER,
+                     observation_date DATE
+                 );
+                 """)
 
     # Insert mock data as needed
     result = conn.execute("SELECT COUNT(*) FROM person").fetchone()

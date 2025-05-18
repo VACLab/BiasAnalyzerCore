@@ -1,26 +1,30 @@
 {% block domain_events %}{% endblock %}
-ranked_visits AS (
-    SELECT
-        person_id,
-        visit_concept_id,
-        visit_start_date AS event_start_date,
-        visit_end_date AS event_end_date,
-        ROW_NUMBER() OVER (
-            PARTITION BY person_id, visit_concept_id
-            ORDER BY visit_start_date ASC
-        ) AS event_instance
-    FROM visit_occurrence
-),
 domain_qualifying_events AS (
     {% block inclusion_temporal_event_criteria %}
     {% endblock %}
 ),
 filtered_cohort AS (
     SELECT c.person_id,
+         {% if temporal_events %}
            MIN(c.event_start_date) AS cohort_start_date,
            MAX(c.event_end_date) AS cohort_end_date
+         {% else %}
+           MIN(all_events.event_start_date) AS cohort_start_date,
+           MAX(all_events.event_end_date) AS cohort_end_date
+         {% endif %}
     FROM domain_qualifying_events c
     JOIN person p ON c.person_id = p.person_id
+    {% if not temporal_events and ranked_domains %}
+    LEFT JOIN (
+        {% for domain_type, domain in ranked_domains.items() %}
+        {% if domain.table %}
+        SELECT person_id, {{ domain.start_date }} AS event_start_date, {{ domain.end_date }} AS event_end_date
+        FROM {{ domain.table }}
+        {% if not loop.last %} UNION ALL {% endif %}
+        {% endif %}
+        {% endfor %}
+    ) all_events ON c.person_id = all_events.person_id
+    {% endif %}
     WHERE 1=1
     {% block inclusion_demographics_criteria %}
     {% endblock %}
