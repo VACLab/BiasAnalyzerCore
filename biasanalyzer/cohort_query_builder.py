@@ -57,14 +57,22 @@ class CohortQueryBuilder:
         exclusion_criteria = cohort_config.get('exclusion_criteria', {})
         inclusion_events = inclusion_criteria.get("temporal_events", [])
         exclusion_events = exclusion_criteria.get("temporal_events", [])
+        temporal_events = bool(inclusion_events) # Only inclusion_events matter for cohort dates
         all_domains = self._extract_domains(inclusion_events + exclusion_events)
-        ranked_domains = {dt: DOMAIN_MAPPING[dt] for dt in all_domains if dt in DOMAIN_MAPPING}
+        # Filter DOMAIN_MAPPING to exclude domains with table: None
+        valid_domains = {k: v for k, v in DOMAIN_MAPPING.items() if v.get('table')}
+        ranked_domains = {dt: valid_domains[dt] for dt in all_domains if dt in valid_domains}
+
+        if not temporal_events:
+            # For demographic only inclusion criteria, filter DOMAIN_MAPPING to exclude domains with table: None
+            ranked_domains = valid_domains
 
         template = self.env.get_template(f"cohort_creation_query.sql.j2")
         return template.render(
             inclusion_criteria=inclusion_criteria,
             exclusion_criteria=exclusion_criteria,
-            ranked_domains=ranked_domains
+            ranked_domains=ranked_domains,
+            temporal_events=temporal_events
         )
 
     @staticmethod
