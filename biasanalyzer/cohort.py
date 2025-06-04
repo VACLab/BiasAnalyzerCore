@@ -79,6 +79,12 @@ class CohortAction:
         Create a new cohort by executing a query on OMOP CDM database
         and storing the result in BiasDatabase. The query can be passed in directly
         or built from a yaml file using a corresponding SQL query template
+        :param cohort_name: the name of the cohort
+        :param description: the description of the cohort
+        :param query_or_yaml_file: the SQL query string or yaml file name for creating a cohort
+        :param created_by: created_by string indicating who created the cohort, it could be 'system',
+        or a username, or whatever metadata to record who created the cohort
+        :return: CohortData object if cohort is created successfully; otherwise, return None
         """
         stages = [
             "Built query",

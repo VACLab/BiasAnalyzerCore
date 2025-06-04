@@ -1,3 +1,4 @@
+import time
 from pydantic import ValidationError
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
 from biasanalyzer.cohort import CohortAction
@@ -159,17 +160,25 @@ class BIAS:
             return None
 
 
-    def create_cohort(self, cohort_name, cohort_desc, query_or_yaml_file, created_by):
+    def create_cohort(self, cohort_name: str, cohort_desc: str, query_or_yaml_file: str, created_by: str,
+                      delay: float=0):
         """
-        cohort_name: name of the cohort
-        cohort_desc: description of the cohort
-        query_or_yaml_file: a SQL query or YAML cohort creation file
-        created_by: name of the user that created the cohort
+        API method that allows to create a cohort
+        :param cohort_name: name of the cohort
+        :param cohort_desc: description of the cohort
+        :param query_or_yaml_file: a SQL query or YAML cohort creation file
+        :param created_by: name of the user that created the cohort
+        :param delay: the number of seconds to sleep/delay for simulating long-running task for async testing,
+        default is 0, meaning no delay
+        :return: CohortData object if cohort is created successfully; otherwise, None
         """
+
         c_action = self._set_cohort_action()
         if c_action:
-            created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query_or_yaml_file,
-                                                    created_by)
+            if delay > 0:
+                print(f"[DEBUG] Simulating long-running task with {delay} seconds delay...")
+                time.sleep(delay)
+            created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query_or_yaml_file, created_by)
             if created_cohort is not None:
                 print('cohort created successfully')
             return created_cohort
@@ -178,13 +187,14 @@ class BIAS:
             return None
 
 
-
     def compare_cohorts(self, cohort_id1, cohort_id2):
         c_action = self._set_cohort_action()
         if c_action:
             return c_action.compare_cohorts(cohort_id1, cohort_id2)
         else:
             print('failed to create a valid cohort action object')
+            return None
+
 
     def cleanup(self):
         self.bias_db.close()
