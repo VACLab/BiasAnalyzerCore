@@ -175,11 +175,11 @@ class BIAS:
 
         c_action = self._set_cohort_action()
         if c_action:
-            if delay > 0:
-                print(f"[DEBUG] Simulating long-running task with {delay} seconds delay...")
-                time.sleep(delay)
             created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query_or_yaml_file, created_by)
             if created_cohort is not None:
+                if delay > 0:
+                    print(f"[DEBUG] Simulating long-running task with {delay} seconds delay...")
+                    time.sleep(delay)
                 print('cohort created successfully')
             return created_cohort
         else:
