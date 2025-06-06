@@ -1,7 +1,8 @@
 import os
 import pytest
-from biasanalyzer import __version__
 import logging
+from unittest.mock import patch
+from biasanalyzer import __version__
 
 
 def test_version():
@@ -21,9 +22,8 @@ def test_set_config(caplog, fresh_bias_obj):
         fresh_bias_obj.set_config(invalid_config_file)
     assert 'is not valid' in caplog.text
 
-
 @pytest.mark.usefixtures
-def test_set_root_omop(caplog, fresh_bias_obj):
+def test_set_root_omop(monkeypatch, caplog, fresh_bias_obj):
     caplog.clear()
     with caplog.at_level(logging.INFO):
         fresh_bias_obj.set_root_omop()
@@ -36,3 +36,49 @@ def test_set_root_omop(caplog, fresh_bias_obj):
         fresh_bias_obj.set_config(config_file_with_unsupported_db_type)
         fresh_bias_obj.set_root_omop()
     assert 'Unsupported database type' in caplog.text
+
+    # Create a fake postgresql config
+    config = {
+        "root_omop_cdm_database": {
+            "database_type": "postgresql",
+            "username": "testuser",
+            "password": "testpass",
+            "hostname": "localhost",
+            "port": 5432,
+            "database": "testdb"
+        }
+    }
+
+    # Patch the config parser to return this directly instead of reading a file
+    monkeypatch.setattr(fresh_bias_obj, "set_config", lambda x: setattr(fresh_bias_obj, "config", config))
+
+    # Patch OMOPCDMDatabase to avoid real DB connection
+    class MockOMOPCDMDatabase:
+        def __init__(self, db_url):
+            self.db_url = db_url
+        def close(self):
+            pass
+
+    monkeypatch.setattr("biasanalyzer.api.OMOPCDMDatabase", MockOMOPCDMDatabase)
+
+    # --- Step 3: Mock BiasDatabase and its methods ---
+    class MockBiasDatabase:
+        def __init__(self, path):
+            self.omop_cdm_db_url = None
+
+        def load_postgres_extension(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("biasanalyzer.api.BiasDatabase", MockBiasDatabase)
+
+    # Run
+    fresh_bias_obj.set_config("dummy.yaml")  # This will now inject the mocked config
+    fresh_bias_obj.set_root_omop()
+
+    # Check values
+    assert fresh_bias_obj.omop_cdm_db.db_url == "postgresql://testuser:testpass@localhost:5432/testdb"
+    assert fresh_bias_obj.bias_db is not None
+    assert fresh_bias_obj.bias_db.omop_cdm_db_url == "postgresql://testuser:testpass@localhost:5432/testdb"
