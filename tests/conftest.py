@@ -33,7 +33,8 @@ def test_db():
                 concept_id INTEGER PRIMARY KEY,
                 concept_name TEXT,
                 concept_code TEXT,
-                vocabulary_id TEXT
+                vocabulary_id TEXT,
+                domain_id TEXT
             );
         """)
     conn.execute("""
@@ -127,17 +128,17 @@ def test_db():
     result = conn.execute("SELECT COUNT(*) FROM concept").fetchone()
     if result[0] == 0:
         conn.execute("""
-                INSERT INTO concept (concept_id, concept_name, concept_code, vocabulary_id)
+                INSERT INTO concept (concept_id, concept_name, concept_code, vocabulary_id, domain_id)
                 VALUES
-                    (4274025, 'Disease', '64572001', 'SNOMED'), 
-                    (1, 'Diabetes Mellitus', 'E10-E14', 'ICD10CM'), 
-                    (2, 'Type 1 Diabetes Mellitus', 'E10', 'ICD10CM'),
-                    (3, 'Type 2 Diabetes Mellitus', 'E11', 'ICD10CM'), 
-                    (4, 'Diabetic Retinopathy', 'E10.3/E11.3', 'ICD10CM'), 
-                    (5, 'Fever', 'R50.9', 'ICD10CM'),
-                    (37311061, 'COVID-19', '840539006', 'SNOMED'),
-                    (4041664, 'Difficulty breathing', '230145002', 'SNOMED'),
-                    (316139, 'Heart failure', '84114007', 'SNOMED');
+                    (4274025, 'Disease', '64572001', 'SNOMED', 'Condition'), 
+                    (1, 'Diabetes Mellitus', 'E10-E14', 'ICD10CM', 'Condition'), 
+                    (2, 'Type 1 Diabetes Mellitus', 'E10', 'ICD10CM', 'Condition'),
+                    (3, 'Type 2 Diabetes Mellitus', 'E11', 'ICD10CM', 'Condition'), 
+                    (4, 'Diabetic Retinopathy', 'E10.3/E11.3', 'ICD10CM', 'Condition'), 
+                    (5, 'Fever', 'R50.9', 'ICD10CM', 'Condition'),
+                    (37311061, 'COVID-19', '840539006', 'SNOMED', 'Condition'),
+                    (4041664, 'Difficulty breathing', '230145002', 'SNOMED', 'Condition'),
+                    (316139, 'Heart failure', '84114007', 'SNOMED', 'Condition');
             """)
 
     # Insert hierarchical relationships as needed

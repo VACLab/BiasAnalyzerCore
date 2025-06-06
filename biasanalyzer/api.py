@@ -10,19 +10,14 @@ from biasanalyzer.utils import get_direction_arrow, notify_users
 
 
 class BIAS:
-    _instance = None
-
-    def __init__(self):
-        self.config = {}
+    def __init__(self, config_file_path=None):
         self.bias_db = None
         self.omop_cdm_db = None
         self.cohort_action = None
-
-    def __new__(cls, config_file_path=None):
-        if cls._instance is None:
-            cls._instance = super(BIAS, cls).__new__(cls)
-            cls._instance.set_config(config_file_path)
-        return cls._instance
+        if config_file_path is None:
+            self.config = {}
+        else:
+            self.set_config(config_file_path)
 
     def set_config(self, config_file_path: str):
         if config_file_path is None:
@@ -77,6 +72,7 @@ class BIAS:
         return self.cohort_action
 
     def get_domains_and_vocabularies(self):
+        print(f'self.omop_cdm_db: {self.omop_cdm_db}')
         if self.omop_cdm_db is None:
             notify_users('A valid OMOP CDM must be set before getting domains. '
                          'Call set_root_omop first to set a valid root OMOP CDM')

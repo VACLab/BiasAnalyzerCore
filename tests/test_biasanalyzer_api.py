@@ -1,14 +1,12 @@
 import os
 import pytest
 import logging
-from unittest.mock import patch
 from biasanalyzer import __version__
 
 
 def test_version():
     assert __version__ == '0.1.0'
 
-@pytest.mark.usefixtures
 def test_set_config(caplog, fresh_bias_obj):
     caplog.clear()
     with caplog.at_level(logging.ERROR):
@@ -22,7 +20,6 @@ def test_set_config(caplog, fresh_bias_obj):
         fresh_bias_obj.set_config(invalid_config_file)
     assert 'is not valid' in caplog.text
 
-@pytest.mark.usefixtures
 def test_set_root_omop(monkeypatch, caplog, fresh_bias_obj):
     caplog.clear()
     with caplog.at_level(logging.INFO):
@@ -50,7 +47,7 @@ def test_set_root_omop(monkeypatch, caplog, fresh_bias_obj):
     }
 
     # Patch the config parser to return this directly instead of reading a file
-    monkeypatch.setattr(fresh_bias_obj, "set_config", lambda x: setattr(fresh_bias_obj, "config", config))
+    monkeypatch.setattr(fresh_bias_obj, "config", config)
 
     # Patch OMOPCDMDatabase to avoid real DB connection
     class MockOMOPCDMDatabase:
@@ -82,3 +79,34 @@ def test_set_root_omop(monkeypatch, caplog, fresh_bias_obj):
     assert fresh_bias_obj.omop_cdm_db.db_url == "postgresql://testuser:testpass@localhost:5432/testdb"
     assert fresh_bias_obj.bias_db is not None
     assert fresh_bias_obj.bias_db.omop_cdm_db_url == "postgresql://testuser:testpass@localhost:5432/testdb"
+
+def test_set_cohort_action(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj._set_cohort_action()
+    assert 'valid OMOP CDM must be set' in caplog.text
+
+def test_get_domains_and_vocabularies_invalid(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.get_domains_and_vocabularies()
+    assert 'valid OMOP CDM must be set' in caplog.text
+
+def test_get_domains_and_vocabularies(test_db):
+    domains_and_vocabularies = test_db.get_domains_and_vocabularies()
+    print(f'domains_and_vocabs: {domains_and_vocabularies}', flush=True)
+    expected = [{'domain_id': 'Condition', 'vocabulary_id': 'ICD10CM'},
+                {'domain_id': 'Condition', 'vocabulary_id': 'SNOMED'}]
+    assert domains_and_vocabularies == expected
+
+def test_get_concepts(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.get_concepts('dummy')
+    assert 'valid OMOP CDM must be set' in caplog.text
+
+def test_get_concept_hierarchy(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.get_concept_hierarchy('dummy')
+    assert 'valid OMOP CDM must be set' in caplog.text
