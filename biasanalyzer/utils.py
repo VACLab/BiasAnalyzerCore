@@ -1,5 +1,29 @@
 import numpy as np
 import re
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
+def notify_users(message: str, level: str = "info"):
+    """
+    Notify users via both print and logging.
+    :param message: message to show
+    :param level: Logging level: 'info', 'warning', 'error'
+    :return:
+    """
+
+    print(message)
+
+    log_func = {
+        "info": logger.info,
+        "warning": logger.warning,
+        "error": logger.error,
+        "debug": logger.debug,
+    }.get(level.lower(), logger.info)
+
+    log_func(message)
 
 
 def get_direction_arrow(tree_type):

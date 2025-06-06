@@ -6,7 +6,7 @@ from biasanalyzer.config import load_config
 from ipywidgets import VBox, Label
 from ipytree import Tree, Node
 from IPython.display import display
-from biasanalyzer.utils import get_direction_arrow
+from biasanalyzer.utils import get_direction_arrow, notify_users
 
 
 class BIAS:
@@ -26,24 +26,24 @@ class BIAS:
 
     def set_config(self, config_file_path: str):
         if config_file_path is None:
-            print('no configuration file specified. '
-                  'Call set_config(config_file_path) next to specify configurations')
+            notify_users('no configuration file specified. '
+                         'Call set_config(config_file_path) next to specify configurations')
         else:
             try:
                 self.config = load_config(config_file_path)
-                print(f'configuration specified in {config_file_path} loaded successfully')
+                notify_users(f'configuration specified in {config_file_path} loaded successfully')
             except FileNotFoundError:
-                print('specified configuration file does not exist. '
-                      'Call set_config(config_file_path) next to specify a valid '
-                      'configuration file')
+                notify_users('specified configuration file does not exist. '
+                             'Call set_config(config_file_path) next to specify a valid configuration file',
+                             level='error')
             except ValidationError as ex:
-                print(f'configuration yaml file is not valid with validation error: {ex}')
+                notify_users(f'configuration yaml file is not valid with validation error: {ex}', level='error')
 
     def set_root_omop(self):
         if not self.config:
-            print('no valid configuration to set root OMOP CDM data. '
-                  'Call set_config(config_file_path) to specify configurations first.')
-        elif 'root_omop_cdm_database' in self.config:
+            notify_users('no valid configuration to set root OMOP CDM data. '
+                         'Call set_config(config_file_path) to specify configurations first.')
+        else:
             db_type = self.config['root_omop_cdm_database']['database_type']
             if db_type == 'postgresql':
                 user = self.config['root_omop_cdm_database']['username']
@@ -65,14 +65,12 @@ class BIAS:
                 self.bias_db = BiasDatabase(db_path)
                 self.bias_db.omop_cdm_db_url = db_path
             else:
-                print(f"Unsupported database type: {db_type}")
-        else:
-            print('Configuration file must include configuration values for root_omop_cdm_database key.')
+                notify_users(f"Unsupported database type: {db_type}")
 
     def _set_cohort_action(self):
         if self.omop_cdm_db is None:
-            print('A valid OMOP CDM must be set before creating a cohort. '
-                  'Call set_root_omop first to set a valid root OMOP CDM')
+            notify_users('A valid OMOP CDM must be set before creating a cohort. '
+                         'Call set_root_omop first to set a valid root OMOP CDM')
             return None
         if self.cohort_action is None:
             self.cohort_action = CohortAction(self.omop_cdm_db, self.bias_db)
@@ -80,25 +78,25 @@ class BIAS:
 
     def get_domains_and_vocabularies(self):
         if self.omop_cdm_db is None:
-            print('A valid OMOP CDM must be set before getting domains. '
-                  'Call set_root_omop first to set a valid root OMOP CDM')
+            notify_users('A valid OMOP CDM must be set before getting domains. '
+                         'Call set_root_omop first to set a valid root OMOP CDM')
             return None
         return self.omop_cdm_db.get_domains_and_vocabularies()
 
     def get_concepts(self, search_term, domain=None, vocabulary=None):
         if self.omop_cdm_db is None:
-            print('A valid OMOP CDM must be set before getting concepts. '
-                  'Call set_root_omop first to set a valid root OMOP CDM')
+            notify_users('A valid OMOP CDM must be set before getting concepts. '
+                         'Call set_root_omop first to set a valid root OMOP CDM')
             return None
         if domain is None and vocabulary is None:
-            print('either domain or vocabulary must be set to constrain the number of returned concepts')
+            notify_users('either domain or vocabulary must be set to constrain the number of returned concepts')
             return None
         return self.omop_cdm_db.get_concepts(search_term, domain, vocabulary)
 
     def get_concept_hierarchy(self, concept_id):
         if self.omop_cdm_db is None:
-            print('A valid OMOP CDM must be set before getting concepts. '
-                  'Call set_root_omop first to set a valid root OMOP CDM')
+            notify_users('A valid OMOP CDM must be set before getting concepts. '
+                         'Call set_root_omop first to set a valid root OMOP CDM')
             return None
         return self.omop_cdm_db.get_concept_hierarchy(concept_id)
 
@@ -134,7 +132,7 @@ class BIAS:
             elif 'children' in concept_tree:
                 tree_type = 'children'
             else:
-                print('The input concept tree must contain parents or children key as the type of the tree.')
+                notify_users('The input concept tree must contain parents or children key as the type of the tree.')
                 return ''
 
         if show_in_text_format:
@@ -178,12 +176,12 @@ class BIAS:
             created_cohort = c_action.create_cohort(cohort_name, cohort_desc, query_or_yaml_file, created_by)
             if created_cohort is not None:
                 if delay > 0:
-                    print(f"[DEBUG] Simulating long-running task with {delay} seconds delay...")
+                    notify_users(f"[DEBUG] Simulating long-running task with {delay} seconds delay...")
                     time.sleep(delay)
-                print('cohort created successfully')
+                notify_users('cohort created successfully')
             return created_cohort
         else:
-            print('failed to create a valid cohort action object')
+            notify_users('failed to create a valid cohort action object')
             return None
 
 
@@ -192,11 +190,14 @@ class BIAS:
         if c_action:
             return c_action.compare_cohorts(cohort_id1, cohort_id2)
         else:
-            print('failed to create a valid cohort action object')
+            notify_users('failed to create a valid cohort action object')
             return None
 
 
     def cleanup(self):
-        self.bias_db.close()
-        self.omop_cdm_db.close()
-        del self.cohort_action
+        if self.bias_db:
+            self.bias_db.close()
+        if self.omop_cdm_db:
+            self.omop_cdm_db.close()
+        if self.cohort_action:
+            del self.cohort_action

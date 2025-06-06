@@ -1,13 +1,11 @@
 import os
 
-from numpy.ma.testutils import assert_equal
-
 from biasanalyzer.config import load_config, load_cohort_creation_config
 
 
 def test_load_config():
     try:
-        config = load_config(os.path.join(os.path.dirname(__file__), 'assets', 'test_config.yaml'))
+        config = load_config(os.path.join(os.path.dirname(__file__), 'assets', 'config', 'test_config.yaml'))
     except Exception as e:
         assert False, f"load_config() raised an exception: {e}"
 
@@ -45,14 +43,3 @@ def test_load_cohort_creation_config():
     in_events = config.get('inclusion_criteria')['temporal_events']
     assert 'operator' in in_events[0]
     assert 'events' in in_events[0]
-
-    # ex_events = config.get('exclusion_criteria')['temporal_events']
-    # ex_demographics = config.get('exclusion_criteria').get('demographics')
-    # assert 'operator' in ex_events[0]
-    # assert 'events' in ex_events[0]
-    # assert 'event_type' in ex_events[0]['events'][0]
-    # assert_equal(ex_events[0]['events'][0]['event_type'], 'condition_occurrence',
-    #              'exclusion event type is not condition_occurrence')
-    # assert 'min_birth_year' in ex_demographics
-    # assert 'gender' not in ex_demographics
-    # assert 'max_birth_year' not in ex_demographics

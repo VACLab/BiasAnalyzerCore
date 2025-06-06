@@ -5,9 +5,17 @@ from biasanalyzer.config import load_config
 import os
 
 
+@pytest.fixture
+def fresh_bias_obj():
+    """Provides a fresh BIAS() object with no config set — safe for testing invalid config scenarios."""
+    bias = BIAS()
+    yield bias
+    bias.cleanup()
+
+
 @pytest.fixture(scope="session")
 def test_db():
-    config_file = os.path.join(os.path.dirname(__file__), '..', 'assets', 'test_config.yaml')
+    config_file = os.path.join(os.path.dirname(__file__), 'assets', 'config', 'test_config.yaml')
     config = load_config(config_file)
     db_path = config['root_omop_cdm_database']['database']
     conn = duckdb.connect(db_path)
@@ -241,6 +249,7 @@ def test_db():
 
     # mock configuration file
     bias = BIAS()
+
     bias.set_config(config_file)
     bias.set_root_omop()
 
