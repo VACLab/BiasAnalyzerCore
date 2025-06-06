@@ -372,45 +372,90 @@ class OMOPCDMDatabase:
         return self.execute_query(query)
 
     def get_concepts(self, search_term: str, domain: Optional[str], vocab: Optional[str]) -> list:
-        # find a concept ID based on a search term
         search_term_exact = search_term.lower()
         search_term_suffix = f'{search_term_exact} '
         search_term_prefix = f' {search_term_exact}'
         search_term_prefix_suffix = f' {search_term_exact} '
-        param_set = {
-            "search_term_exact": search_term_exact,
-            "search_term_prefix": search_term_prefix,
-            "search_term_suffix": search_term_suffix,
-            "search_term_prefix_suffix": search_term_prefix_suffix
-        }
-        if domain is not None and vocab is not None:
-            condition_str = "domain_id = :domain and vocabulary_id = :vocabulary"
-            param_set['domain'] = domain
-            param_set['vocabulary'] = vocab
-        elif domain is None:
-            condition_str = "vocabulary_id = :vocabulary"
-            param_set['vocabulary'] = vocab
+
+        if self._database_type == 'duckdb':
+            # Use positional parameters and ? as placeholder to meet duckdb syntax requirement
+            base_query = """
+                         SELECT concept_id, concept_name, valid_start_date, valid_end_date, domain_id, vocabulary_id \
+                         FROM concept
+                         WHERE {condition_str} \
+                           AND (
+                             LOWER (concept_name) = ? \
+                            OR
+                             LOWER (concept_name) LIKE '%' || ? \
+                            OR
+                             LOWER (concept_name) LIKE ? || '%' \
+                            OR
+                             LOWER (concept_name) LIKE '%' || ? || '%'
+                             )
+                         ORDER BY concept_id \
+                         """
+
+            if domain is not None and vocab is not None:
+                condition_str = "domain_id = ? AND vocabulary_id = ?"
+                params = [domain, vocab, search_term_exact, search_term_prefix, search_term_suffix,
+                              search_term_prefix_suffix]
+            elif domain is None:
+                condition_str = "vocabulary_id = ?"
+                params = [vocab, search_term_exact, search_term_prefix, search_term_suffix,
+                              search_term_prefix_suffix]
+            else:
+                condition_str = "domain_id = ?"
+                params = [domain, search_term_exact, search_term_prefix, search_term_suffix,
+                              search_term_prefix_suffix]
+
         else:
-            # vocab is None
-            condition_str = "domain_id = :domain"
-            param_set['domain'] = domain
+            # Use named parameters with :param_name syntax for SQLAlchemy/PostgreSQL
+            base_query = """
+                         SELECT concept_id, concept_name, valid_start_date, valid_end_date, domain_id, vocabulary_id \
+                         FROM concept
+                         WHERE {condition_str} \
+                           AND (
+                             LOWER (concept_name) = :search_term_exact \
+                            OR
+                             LOWER (concept_name) LIKE '%' || :search_term_prefix \
+                            OR
+                             LOWER (concept_name) LIKE :search_term_suffix || '%' \
+                            OR
+                             LOWER (concept_name) LIKE '%' || :search_term_prefix_suffix || '%'
+                             )
+                         ORDER BY concept_id \
+                         """
 
-        query = f"""
-        SELECT concept_id, concept_name, valid_start_date, valid_end_date, domain_id, vocabulary_id FROM concept 
-        where {condition_str} and 
-        (LOWER(concept_name) = :search_term_exact or LOWER(concept_name) LIKE '%' || :search_term_prefix
-        or LOWER(concept_name) LIKE :search_term_suffix || '%'
-        or LOWER(concept_name) LIKE '%' || :search_term_prefix_suffix || '%')
-        ORDER BY concept_id
-        """
+            params = {
+                "search_term_exact": search_term_exact,
+                "search_term_prefix": search_term_prefix,
+                "search_term_suffix": search_term_suffix,
+                "search_term_prefix_suffix": search_term_prefix_suffix
+            }
 
-        return self.execute_query(query, params=param_set)
+            if domain is not None and vocab is not None:
+                condition_str = "domain_id = :domain AND vocabulary_id = :vocabulary"
+                params['domain'] = domain
+                params['vocabulary'] = vocab
+            elif domain is None:
+                condition_str = "vocabulary_id = :vocabulary"
+                params['vocabulary'] = vocab
+            else:
+                condition_str = "domain_id = :domain"
+                params['domain'] = domain
+
+        query = base_query.format(condition_str=condition_str)
+        return self.execute_query(query, params=params)
 
     def get_concept_hierarchy(self, concept_id: int):
         """
         Retrieves the full concept hierarchy (ancestors and descendants) for a given concept_id
         and organizes it into a nested dictionary to represent the tree structure.
         """
+        if not isinstance(concept_id, int):
+            # this check is important to avoid SQL injection risk
+            raise ValueError("concept_id must be an integer")
+
         stages = [
             "Queried concept hierarchy",
             "Fetched concept details",
@@ -419,11 +464,12 @@ class OMOPCDMDatabase:
         progress = tqdm(total=len(stages), desc="Concept Hierarchy", unit="stage")
 
         progress.set_postfix_str(stages[0])
-        query = """
+        # Inline the concept_id directly into the query
+        query = f"""
                 WITH RECURSIVE concept_hierarchy AS (
                     SELECT ancestor_concept_id, descendant_concept_id, min_levels_of_separation
                     FROM concept_ancestor
-                    WHERE ancestor_concept_id = :concept_id OR descendant_concept_id = :concept_id
+                    WHERE ancestor_concept_id = {concept_id} OR descendant_concept_id = {concept_id}
 
                     UNION
 
@@ -434,9 +480,9 @@ class OMOPCDMDatabase:
                 SELECT ancestor_concept_id, descendant_concept_id
                 FROM concept_hierarchy
                 WHERE min_levels_of_separation > 0
-                """
+            """
+        results = self.execute_query(query)
 
-        results = self.execute_query(query, params={"concept_id": concept_id})
         progress.update(1)
 
         progress.set_postfix_str(stages[1])
@@ -445,13 +491,15 @@ class OMOPCDMDatabase:
         # Fetch details of each concept
         concept_details = {}
         if concept_ids:
-            query = """
+            # Convert set of integers to comma-separated string
+            concept_ids_str = ", ".join(str(cid) for cid in concept_ids)
+            query = f"""
                     SELECT concept_id, concept_name, vocabulary_id, concept_code
                     FROM concept
-                    WHERE concept_id IN :concept_ids
+                    WHERE concept_id IN ({concept_ids_str})
                     """
 
-            result = self.execute_query(query, params={"concept_ids": tuple(concept_ids)})
+            result = self.execute_query(query)
             concept_details = {row['concept_id']: row for row in result}
         progress.update(1)
 

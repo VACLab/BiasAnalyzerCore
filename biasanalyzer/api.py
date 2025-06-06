@@ -20,7 +20,7 @@ class BIAS:
             self.set_config(config_file_path)
 
     def set_config(self, config_file_path: str):
-        if config_file_path is None:
+        if not config_file_path:
             notify_users('no configuration file specified. '
                          'Call set_config(config_file_path) next to specify configurations')
         else:

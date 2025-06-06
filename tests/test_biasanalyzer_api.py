@@ -1,6 +1,8 @@
 import os
-import pytest
+import datetime
 import logging
+import pytest
+
 from biasanalyzer import __version__
 
 
@@ -8,6 +10,11 @@ def test_version():
     assert __version__ == '0.1.0'
 
 def test_set_config(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.set_config('')
+    assert 'no configuration file specified' in caplog.text
+
     caplog.clear()
     with caplog.at_level(logging.ERROR):
         fresh_bias_obj.set_config('non_existent_config_file.yaml')
@@ -94,19 +101,48 @@ def test_get_domains_and_vocabularies_invalid(caplog, fresh_bias_obj):
 
 def test_get_domains_and_vocabularies(test_db):
     domains_and_vocabularies = test_db.get_domains_and_vocabularies()
-    print(f'domains_and_vocabs: {domains_and_vocabularies}', flush=True)
     expected = [{'domain_id': 'Condition', 'vocabulary_id': 'ICD10CM'},
                 {'domain_id': 'Condition', 'vocabulary_id': 'SNOMED'}]
     assert domains_and_vocabularies == expected
 
-def test_get_concepts(caplog, fresh_bias_obj):
+def test_get_concepts_no_omop_cdm(caplog, fresh_bias_obj):
     caplog.clear()
     with caplog.at_level(logging.INFO):
         fresh_bias_obj.get_concepts('dummy')
     assert 'valid OMOP CDM must be set' in caplog.text
 
-def test_get_concept_hierarchy(caplog, fresh_bias_obj):
+def test_get_concepts_no_domain_and_vocab(caplog, test_db):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        test_db.get_concepts('dummy')
+    assert 'either domain or vocabulary must be set' in caplog.text
+
+def test_get_concepts(test_db):
+    concepts = test_db.get_concepts('Heart failure', domain='Condition', vocabulary='SNOMED')
+    print(f'concepts: {concepts}', flush=True)
+    expected = [{'concept_id': 316139, 'concept_name': 'Heart failure',
+                 'valid_start_date': datetime.date(2012, 4, 1),
+                 'valid_end_date': datetime.date(2020, 4, 1),
+                 'domain_id': 'Condition', 'vocabulary_id': 'SNOMED'}]
+    assert concepts == expected
+
+def test_get_concept_hierarchy_no_omop_cdm(caplog, fresh_bias_obj):
     caplog.clear()
     with caplog.at_level(logging.INFO):
         fresh_bias_obj.get_concept_hierarchy('dummy')
     assert 'valid OMOP CDM must be set' in caplog.text
+
+def test_get_concept_hierarchy(test_db):
+    with pytest.raises(ValueError):
+        test_db.get_concept_hierarchy('not_int_str')
+        
+    hierarchy = test_db.get_concept_hierarchy(2)
+    print(f'hierarchy: {hierarchy}', flush=True)
+    expected = ({'details': {'concept_id': 2, 'concept_name': 'Type 1 Diabetes Mellitus', 'vocabulary_id': 'ICD10CM',
+                             'concept_code': 'E10'}, 'parents': [{'details': {'concept_id': 1, 'concept_name':
+        'Diabetes Mellitus', 'vocabulary_id': 'ICD10CM', 'concept_code': 'E10-E14'}, 'parents': []}]},
+                {'details': {'concept_id': 2, 'concept_name': 'Type 1 Diabetes Mellitus', 'vocabulary_id': 'ICD10CM',
+                             'concept_code': 'E10'}, 'children': [{'details': {'concept_id': 4, 'concept_name':
+                    'Diabetic Retinopathy', 'vocabulary_id': 'ICD10CM', 'concept_code': 'E10.3/E11.3'},
+                                                                   'children': []}]})
+    assert hierarchy == expected
