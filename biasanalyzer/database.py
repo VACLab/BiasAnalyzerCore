@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
 from biasanalyzer.models import Cohort, CohortDefinition
 from biasanalyzer.sql import *
-from biasanalyzer.utils import build_concept_hierarchy, print_hierarchy, find_roots
+from biasanalyzer.utils import build_concept_hierarchy, print_hierarchy, find_roots, notify_users
 
 
 class BiasDatabase:
@@ -51,7 +51,7 @@ class BiasDatabase:
             self.conn.execute('CREATE SEQUENCE id_sequence START 1')
         except duckdb.Error as e:
             if "already exists" in str(e).lower():
-                print("Sequence already exists, skipping creation.")
+                notify_users("Sequence already exists, skipping creation.")
             else:
                 raise
         self.conn.execute('''
@@ -65,7 +65,7 @@ class BiasDatabase:
                       PRIMARY KEY (id)
                       )
                 ''')
-        print("Cohort Definition table created.")
+        notify_users("Cohort Definition table created.")
 
     def _create_cohort_table(self):
         self.conn.execute('''
@@ -83,10 +83,10 @@ class BiasDatabase:
             ''')
         except duckdb.Error as e:
             if "already exists" in str(e).lower():
-                print("Index already exists, skipping creation.")
+                notify_users("Index already exists, skipping creation.")
             else:
                 raise
-        print("Cohort table created.")
+        notify_users("Cohort table created.")
 
     def load_postgres_extension(self):
         self.conn.execute("INSTALL postgres_scanner;")
@@ -104,7 +104,7 @@ class BiasDatabase:
             cohort_definition.created_by
         ))
         if progress_obj is None:
-            print("Cohort definition inserted successfully.")
+            notify_users("Cohort definition inserted successfully.")
         else:
             progress_obj.write("Cohort definition inserted successfully.")
         self.conn.execute("SELECT id from cohort_definition ORDER BY id DESC LIMIT 1")
@@ -194,7 +194,7 @@ class BiasDatabase:
                                          f"Valid variables are {self.__class__.stats_queries.keys()}")
                     stats_query = query_str.format(cohort_definition_id)
                 else:
-                    print("Cannot connect to the OMOP database to query person table")
+                    notify_users("Cannot connect to the OMOP database to query person table")
                     return None
             else:
                 # Query the cohort data to get basic statistics
@@ -225,7 +225,7 @@ class BiasDatabase:
             return self._execute_query(stats_query)
 
         except Exception as e:
-            print(f"Error computing cohort basic statistics: {e}")
+            notify_users(f"Error computing cohort basic statistics: {e}", level='error')
             return None
 
     @property
@@ -239,16 +239,16 @@ class BiasDatabase:
         try:
             if self._create_omop_table('person'):
                 query_str = self.__class__.distribution_queries.get(variable)
-                if query_str is None:
+                if not query_str:
                     raise ValueError(f"Distribution for variable '{variable}' is not available. "
                                      f"Valid variables are {self.__class__.distribution_queries.keys()}")
                 query = query_str.format(cohort_definition_id)
                 return self._execute_query(query)
             else:
-                print("Cannot connect to the OMOP database to query person table")
+                notify_users("Cannot connect to the OMOP database to query person table")
                 return None
         except Exception as e:
-            print(f"Error computing cohort {variable} distributions: {e}")
+            notify_users(f"Error computing cohort {variable} distributions: {e}", level='error')
             return None
 
     def get_cohort_concept_stats(self, cohort_definition_id: int,
@@ -259,8 +259,8 @@ class BiasDatabase:
         """
         concept_stats = {}
         if concept_type not in self.__class__.cohort_concept_queries:
-            print(f"input {concept_type} is not a valid concept type. "
-                  f"Supported concept types are: {self.__class__.cohort_concept_queries.keys()}")
+            notify_users(f"input {concept_type} is not a valid concept type. "
+                         f"Supported concept types are: {self.__class__.cohort_concept_queries.keys()}", level='error')
             return concept_stats
         try:
             if self._create_omop_table('concept') and self._create_omop_table('concept_ancestor'):
@@ -279,26 +279,26 @@ class BiasDatabase:
                     filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
                     roots = find_roots(filtered_cs_df)
                     hierarchy = build_concept_hierarchy(filtered_cs_df)
-                    print(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
+                    notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
                     for root in roots:
                         root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
                                   & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
                         print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
                     return concept_stats
                 else:
-                    print(f"Cannot connect to the OMOP database to query {concept_type} table")
+                    notify_users(f"Cannot connect to the OMOP database to query {concept_type} table")
                     return concept_stats
             else:
-                print("Cannot connect to the OMOP database to query concept table")
+                notify_users("Cannot connect to the OMOP database to query concept table")
                 return concept_stats
         except Exception as e:
-            print(f"Error computing cohort concept stats: {e}")
+            notify_users(f"Error computing cohort concept stats: {e}", level='error')
             return concept_stats
 
     def close(self):
         self.conn.close()
         BiasDatabase._instance = None
-        print("Connection to BiasDatabase closed.")
+        notify_users("Connection to BiasDatabase closed.")
 
 
 class OMOPCDMDatabase:
@@ -315,9 +315,9 @@ class OMOPCDMDatabase:
             # Handle DuckDB connection
             try:
                 self.engine = duckdb.connect(db_url)
-                print(f"Connected to the DuckDB database: {db_url}.")
+                notify_users(f"Connected to the DuckDB database: {db_url}.")
             except duckdb.Error as e:
-                print(f"Failed to connect to DuckDB: {e}")
+                notify_users(f"Failed to connect to DuckDB: {e}", level='error')
             self.Session = self.engine  # Use engine directly for DuckDB
             self._database_type = 'duckdb'
         try:
@@ -327,10 +327,10 @@ class OMOPCDMDatabase:
                 connect_args={'options': '-c default_transaction_read_only=on'}  # Enforce read-only transactions
             )
             self.Session = sessionmaker(bind=self.engine)
-            print("Connected to the OMOP CDM database (read-only).")
+            notify_users("Connected to the OMOP CDM database (read-only).")
             self._database_type = 'postgresql'
         except SQLAlchemyError as e:
-            print(f"Failed to connect to the database: {e}")
+            notify_users(f"Failed to connect to the database: {e}", level='error')
 
     def get_session(self):
         if self._database_type == 'duckdb':
@@ -357,10 +357,10 @@ class OMOPCDMDatabase:
             return [dict(zip(headers, row)) for row in results]
 
         except duckdb.Error as e:
-            print(f"Error executing query: {e}")
+            notify_users(f"Error executing query: {e}", level='error')
             return []
         except SQLAlchemyError as e:
-            print(f"Error executing query: {e}")
+            notify_users(f"Error executing query: {e}", level='error')
             omop_session.close()
             return []
 
@@ -534,4 +534,4 @@ class OMOPCDMDatabase:
         else:
             self.engine.dispose()
         OMOPCDMDatabase._instance = None
-        print("Connection to the OMOP CDM database closed.")
+        notify_users("Connection to the OMOP CDM database closed.")

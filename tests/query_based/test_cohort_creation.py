@@ -1,12 +1,13 @@
 import pytest
 import os
 import datetime
+import logging
 from numpy.ma.testutils import assert_equal
 
 
-@pytest.mark.usefixtures
-def test_cohort_creation_baseline(test_db):
+def test_cohort_creation_baseline(caplog, test_db):
     bias = test_db
+    
     cohort = bias.create_cohort(
         "COVID-19 patient",
         "Cohort of young female patients",
@@ -16,11 +17,18 @@ def test_cohort_creation_baseline(test_db):
     )
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"
-    print(f'metadata: {cohort.metadata}')
     assert cohort.metadata is not None, "Cohort creation wrongly returned None metadata"
     assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
-    print(f'baseline cohort data: {cohort.data}', flush=True)
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        cohort.get_distributions('ethnicity')
+    assert "Distribution for variable 'ethnicity' is not available" in caplog.text
+
+    assert len(cohort.get_distributions('age')) == 10, "Cohort get_distribution('age') does not return 10 age_bin items"
+    assert len(cohort.get_distributions('gender')) == 3, ("Cohort get_distribution('gender') does not return "
+                                                          "3 gender_bin items")
+
     patient_ids = set([item['subject_id'] for item in cohort.data])
     assert_equal(len(patient_ids), 5)
     assert_equal(patient_ids, {106, 108, 110, 111, 112})
@@ -39,7 +47,6 @@ def test_cohort_creation_baseline(test_db):
                  "Incorrect cohort_end_date for patient 108")
 
 
-@pytest.mark.usefixtures
 def test_cohort_creation_study(test_db):
     bias = test_db
     cohort = bias.create_cohort(
@@ -51,8 +58,6 @@ def test_cohort_creation_study(test_db):
     )
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"
-    print(f'metadata: {cohort.metadata}')
-    print(f'data: {cohort.data}')
     assert cohort.metadata is not None, "Cohort creation wrongly returned None metadata"
     assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
@@ -60,20 +65,21 @@ def test_cohort_creation_study(test_db):
     assert_equal(len(patient_ids), 4)
     assert_equal(patient_ids, {108, 110, 111, 112})
 
-@pytest.mark.usefixtures
-def test_cohort_creation_study2(test_db):
+def test_cohort_creation_study2(caplog, test_db):
     bias = test_db
-    cohort = bias.create_cohort(
-        "COVID-19 patient",
-        "Cohort of young female patients with no COVID-19",
-        os.path.join(os.path.dirname(__file__), '..', 'assets', 'cohort_creation',
-                    'test_cohort_creation_condition_occurrence_config_study2.yaml'),
-        "test_user"
-    )
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        cohort = bias.create_cohort(
+            "COVID-19 patient",
+            "Cohort of young female patients with no COVID-19",
+            os.path.join(os.path.dirname(__file__), '..', 'assets', 'cohort_creation',
+                        'test_cohort_creation_condition_occurrence_config_study2.yaml'),
+            "test_user",
+            delay=1
+        )
+    assert 'Simulating long-running task' in caplog.text
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"
-    print(f'metadata: {cohort.metadata}')
-    print(f'data: {cohort.data}')
     assert cohort.metadata is not None, "Cohort creation wrongly returned None metadata"
     assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
@@ -81,7 +87,6 @@ def test_cohort_creation_study2(test_db):
     assert_equal(len(patient_ids), 1)
     assert_equal(patient_ids, {106})
 
-@pytest.mark.usefixtures
 def test_cohort_creation_all(test_db):
     bias = test_db
     cohort = bias.create_cohort(
@@ -95,7 +100,6 @@ def test_cohort_creation_all(test_db):
     )
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"
-    print(f'metadata: {cohort.metadata}')
     assert cohort.metadata is not None, "Cohort creation wrongly returned None metadata"
     assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
     stats = cohort.get_stats()
@@ -106,7 +110,6 @@ def test_cohort_creation_all(test_db):
     assert_equal(len(patient_ids), 2)
     assert_equal(patient_ids, {108, 110})
 
-@pytest.mark.usefixtures
 def test_cohort_creation_mixed_domains(test_db):
     """
     Test cohort creation with mixed domains (condition, drug, visit, procedure).

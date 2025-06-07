@@ -93,6 +93,18 @@ def test_set_cohort_action(caplog, fresh_bias_obj):
         fresh_bias_obj._set_cohort_action()
     assert 'valid OMOP CDM must be set' in caplog.text
 
+def test_create_cohort_with_no_action(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.create_cohort('test', 'test', 'test.yaml', 'test')
+    assert 'failed to create a valid cohort action object' in caplog.text
+
+def test_compare_cohort_with_no_action(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.compare_cohorts(1, 2)
+    assert 'failed to create a valid cohort action object' in caplog.text
+
 def test_get_domains_and_vocabularies_invalid(caplog, fresh_bias_obj):
     caplog.clear()
     with caplog.at_level(logging.INFO):
@@ -135,7 +147,7 @@ def test_get_concept_hierarchy_no_omop_cdm(caplog, fresh_bias_obj):
 def test_get_concept_hierarchy(test_db):
     with pytest.raises(ValueError):
         test_db.get_concept_hierarchy('not_int_str')
-        
+
     hierarchy = test_db.get_concept_hierarchy(2)
     print(f'hierarchy: {hierarchy}', flush=True)
     expected = ({'details': {'concept_id': 2, 'concept_name': 'Type 1 Diabetes Mellitus', 'vocabulary_id': 'ICD10CM',
