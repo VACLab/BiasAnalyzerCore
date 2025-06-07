@@ -109,6 +109,23 @@ def test_cohort_creation_all(test_db):
     assert_equal(len(patient_ids), 2)
     assert_equal(patient_ids, {108, 110})
 
+def test_cohort_creation_multiple_temporary_groups_with_no_operator(test_db):
+    bias = test_db
+    cohort = bias.create_cohort(
+        "Patients with COVID or other emergency conditions",
+        "Cohort of young female patients who either have COVID-19 with difficulty breathing 2 to 5 days "
+        "before a COVID diagnosis 3/15/20-12/11/20 OR have at least one emergency room visit or at least "
+        "two inpatient visits",
+        os.path.join(os.path.dirname(__file__), '..', 'assets', 'cohort_creation',
+                     'test_cohort_creation_multiple_temporal_groups_without_operator.yaml'),
+        "test_user"
+    )
+    # Test cohort object and methods
+    patient_ids = set([item['subject_id'] for item in cohort.data])
+    print(f'patient_ids: {patient_ids}', flush=True)
+    assert_equal(len(patient_ids), 2)
+    assert_equal(patient_ids, {108, 110})
+
 def test_cohort_creation_mixed_domains(test_db):
     """
     Test cohort creation with mixed domains (condition, drug, visit, procedure).
