@@ -2,6 +2,7 @@ import os
 import datetime
 import logging
 import pytest
+from ipytree import Node
 
 from biasanalyzer import __version__
 
@@ -158,3 +159,54 @@ def test_get_concept_hierarchy(test_db):
                     'Diabetic Retinopathy', 'vocabulary_id': 'ICD10CM', 'concept_code': 'E10.3/E11.3'},
                                                                    'children': []}]})
     assert hierarchy == expected
+
+def test_display_concept_tree_text_format(capsys, test_db):
+    sample_tree = {
+        "details": {
+            "concept_id": 123,
+            "concept_name": "Hypertension",
+            "concept_code": "I10"
+        }
+    }
+    test_db.display_concept_tree(sample_tree)
+    captured = capsys.readouterr()
+    assert "concept tree must contain parents or children key" in captured.out
+
+    sample_tree['children'] = [{
+        "details": {
+            "concept_id": 456,
+            "concept_name": "Essential Hypertension",
+            "concept_code": "I10.0"
+            },
+        "children": []
+        }]
+    test_db.display_concept_tree(sample_tree, show_in_text_format=True)
+    captured = capsys.readouterr()
+    assert "Hypertension (ID: 123" in captured.out
+    assert "Essential Hypertension (ID: 456" in captured.out
+
+def test_display_concept_tree_widget(test_db):
+    sample_tree = {
+        "details": {
+            "concept_id": 456,
+            "concept_name": "Essential Hypertension",
+            "concept_code": "I10.0"
+        },
+        "parents": [{
+            "details": {
+                "concept_id": 123,
+                "concept_name": "Hypertension",
+                "concept_code": "I10"
+                },
+            "parents": []
+        }]
+    }
+
+    tree_output = test_db.display_concept_tree(sample_tree, show_in_text_format=False)
+    assert tree_output is not None
+    print(tree_output)
+    assert isinstance(tree_output, Node)
+    assert "Essential Hypertension" in tree_output.name
+    assert len(tree_output.nodes) == 1
+    parent_node = tree_output.nodes[0]
+    assert "Hypertension" in parent_node.name

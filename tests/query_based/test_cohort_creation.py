@@ -143,3 +143,26 @@ def test_cohort_creation_mixed_domains(test_db):
     end_dates = [item['cohort_end_date'] for item in cohort.data]
     assert_equal(len(end_dates), 2)
     assert_equal(end_dates, [datetime.date(2020, 6, 20), datetime.date(2020, 6, 20)])
+
+def test_cohort_comparison(test_db):
+    bias = test_db
+    cohort_base = bias.create_cohort(
+        "COVID-19 patient",
+        "Cohort of young female patients",
+        os.path.join(os.path.dirname(__file__), '..', 'assets', 'cohort_creation',
+                     'test_cohort_creation_condition_occurrence_config_baseline.yaml'),
+        "test_user"
+    )
+    cohort_study = bias.create_cohort(
+        "Female diabetes patients born between 1970 and 2000",
+        "Cohort of female patients with diabetes who had insulin prescribed 0-30 days after diagnosis "
+        "and have at least one outpatient or emergency visit and underwent a blood test before 12/31/2020, "
+        "with patients born after 1995 and with cardiac surgery excluded",
+        os.path.join(os.path.dirname(__file__), '..', 'assets', 'cohort_creation',
+                     'test_cohort_creation_config.yaml'),
+        "test_user"
+    )
+    results = bias.compare_cohorts(cohort_base.cohort_id, cohort_study.cohort_id)
+    print(f'results: {results}', flush=True)
+    assert {'gender_hellinger_distance': 0.0} in results
+    assert any('age_hellinger_distance' in r for r in results)

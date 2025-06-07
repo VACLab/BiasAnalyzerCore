@@ -1,5 +1,6 @@
 import numpy as np
 import re
+from ipytree import Node
 import logging
 
 
@@ -65,6 +66,28 @@ def build_concept_hierarchy(df, parent_col="ancestor_concept_id", child_col="des
         for parent, group in grouped
     }
     return hierarchy
+
+
+def build_concept_tree(concept_tree: dict, tree_type: str) -> Node:
+    """
+        Recursively builds an ipytree Node for a given concept tree.
+        """
+    # Extract concept details
+    details = concept_tree.get("details", {})
+    concept_name = details.get("concept_name", "Unknown Concept")
+    concept_id = details.get("concept_id", "")
+    concept_code = details.get("concept_code", "")
+    direction_arrow = get_direction_arrow(tree_type)
+    # Create a label for the current concept
+    label_text = f"{direction_arrow} {concept_name} (ID: {concept_id}, Code: {concept_code})"
+    node = Node(label_text)
+
+    # Recursively add child nodes
+    for child in concept_tree.get(tree_type, []):
+        child_node = build_concept_tree(child, tree_type)
+        node.add_node(child_node)
+
+    return node
 
 
 def find_roots(df, parent_col="ancestor_concept_id", child_col="descendant_concept_id"):

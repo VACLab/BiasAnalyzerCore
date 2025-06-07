@@ -4,9 +4,9 @@ from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
 from biasanalyzer.cohort import CohortAction
 from biasanalyzer.config import load_config
 from ipywidgets import VBox, Label
-from ipytree import Tree, Node
+from ipytree import Tree
 from IPython.display import display
-from biasanalyzer.utils import get_direction_arrow, notify_users
+from biasanalyzer.utils import get_direction_arrow, notify_users, build_concept_tree
 
 
 class BIAS:
@@ -96,27 +96,6 @@ class BIAS:
             return None
         return self.omop_cdm_db.get_concept_hierarchy(concept_id)
 
-    def _build_concept_tree(self, concept_tree: dict, tree_type: str) -> Node:
-        """
-            Recursively builds an ipytree Node for a given concept tree.
-            """
-        # Extract concept details
-        details = concept_tree.get("details", {})
-        concept_name = details.get("concept_name", "Unknown Concept")
-        concept_id = details.get("concept_id", "")
-        concept_code = details.get("concept_code", "")
-        direction_arrow = get_direction_arrow(tree_type)
-        # Create a label for the current concept
-        label_text = f"{direction_arrow} {concept_name} (ID: {concept_id}, Code: {concept_code})"
-        node = Node(label_text)
-
-        # Recursively add child nodes
-        for child in concept_tree.get(tree_type, []):
-            child_node = self._build_concept_tree(child, tree_type)
-            node.add_node(child_node)
-
-        return node
-
     def display_concept_tree(self, concept_tree: dict, level: int = 0, show_in_text_format=True, tree_type=None):
         """
         Recursively prints the concept hierarchy tree in an indented format for display.
@@ -146,12 +125,12 @@ class BIAS:
         else:
             # Extract concept details
             # Build the root tree node
-            root_node = self._build_concept_tree(concept_tree, tree_type)
+            root_node = build_concept_tree(concept_tree, tree_type)
             tree = Tree()
             tree.add_node(root_node)
             tree.opened = True
             display(VBox([Label("Concept Hierarchy"), tree]))
-            return None
+            return root_node
 
 
     def create_cohort(self, cohort_name: str, cohort_desc: str, query_or_yaml_file: str, created_by: str,
