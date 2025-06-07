@@ -1,13 +1,12 @@
-import pytest
 import os
 import datetime
 import logging
+from sqlalchemy.exc import SQLAlchemyError
 from numpy.ma.testutils import assert_equal
 
 
 def test_cohort_creation_baseline(caplog, test_db):
     bias = test_db
-    
     cohort = bias.create_cohort(
         "COVID-19 patient",
         "Cohort of young female patients",
@@ -163,6 +162,54 @@ def test_cohort_comparison(test_db):
         "test_user"
     )
     results = bias.compare_cohorts(cohort_base.cohort_id, cohort_study.cohort_id)
-    print(f'results: {results}', flush=True)
     assert {'gender_hellinger_distance': 0.0} in results
     assert any('age_hellinger_distance' in r for r in results)
+
+def test_cohort_invalid(caplog, test_db):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        invalid_cohort = test_db.create_cohort('invalid_cohort', 'invalid_cohort',
+                                               'invalid_yaml_file.yml',
+                                               'invalid_created_by')
+    assert 'cohort creation configuration file does not exist' in caplog.text
+    assert invalid_cohort is None
+
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        invalid_cohort = test_db.create_cohort('invalid_cohort', 'invalid_cohort',
+                                               os.path.join(os.path.dirname(__file__), '..', 'assets', 'config',
+                                                            'test_config.yaml'), 'invalid_created_by')
+    assert 'configuration yaml file is not valid' in caplog.text
+    assert invalid_cohort is None
+
+    with caplog.at_level(logging.INFO):
+        invalid_cohort = test_db.create_cohort('invalid_cohort', 'invalid_cohort',
+                                               'INVALID SQL QUERY STRING',
+                                               'invalid_created_by')
+    assert 'Error executing query:' in caplog.text
+    assert invalid_cohort is None
+
+def test_create_cohort_sqlalchemy_error(monkeypatch, fresh_bias_obj):
+    # Mock omop_db methods
+    class MockOmopDB:
+        def get_session(self):
+            return self  # not used after error
+        def execute_query(self, query):
+            raise SQLAlchemyError("Mocked SQLAlchemy error")
+        def close(self):
+            pass
+
+    class MockBiasDB:
+        def create_cohort_definition(self, *args, **kwargs):
+            pass
+        def create_cohort_in_bulk(self, *args, **kwargs):
+            pass
+        def close(self):
+            pass
+
+    fresh_bias_obj.omop_cdm_db = MockOmopDB()
+    fresh_bias_obj.bias_db = MockBiasDB()
+
+    result = fresh_bias_obj.create_cohort("test", "desc", "SELECT * FROM person", "test_user")
+
+    assert result is None
