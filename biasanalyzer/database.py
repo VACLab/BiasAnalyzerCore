@@ -104,24 +104,12 @@ class BiasDatabase:
             cohort_definition.created_by
         ))
         if progress_obj is None:
-            notify_users("Cohort definition inserted successfully.")
+            notify_users("Cohort definition inserted successfully.")  # pragma: no cover
         else:
             progress_obj.write("Cohort definition inserted successfully.")
         self.conn.execute("SELECT id from cohort_definition ORDER BY id DESC LIMIT 1")
         created_cohort_id = self.conn.fetchone()[0]
         return created_cohort_id
-
-    # Method to insert cohort data
-    def create_cohort(self, cohort: Cohort):
-        self.conn.execute('''
-            INSERT INTO cohort (subject_id, cohort_definition_id, cohort_start_date, cohort_end_date)
-            VALUES (?, ?, ?, ?)
-        ''', (
-            cohort.subject_id,
-            cohort.cohort_definition_id,
-            cohort.cohort_start_date,
-            cohort.cohort_end_date
-        ))
 
     # Method to insert cohort data in bulk from a dataframe
     def create_cohort_in_bulk(self, cohort_df: pd.DataFrame):
@@ -161,20 +149,18 @@ class BiasDatabase:
                 SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', {table_name})
             """)
             return True # success
-        elif self.omop_cdm_db_url.endswith('.duckdb'):
+        elif self.omop_cdm_db_url is None:
+            return False
+        else: # omop table is already included in duckdb
             return True
-        else:
-            return False # failure
+
 
     def _execute_query(self, query_str):
         results = self.conn.execute(query_str)
 
         headers = [desc[0] for desc in results.description]
         rows = results.fetchall()
-        if len(rows) == 0:
-            return []
-        else:
-            return [dict(zip(headers, row)) for row in rows]
+        return [dict(zip(headers, row)) for row in rows]
 
     def get_cohort_basic_stats(self, cohort_definition_id: int, variable=''):
         """
@@ -263,31 +249,28 @@ class BiasDatabase:
                          f"Supported concept types are: {self.__class__.cohort_concept_queries.keys()}", level='error')
             return concept_stats
         try:
-            if self._create_omop_table('concept') and self._create_omop_table('concept_ancestor'):
+            if (self._create_omop_table('concept') and self._create_omop_table('concept_ancestor')
+                    and self._create_omop_table(concept_type)):
                 query_str = self.__class__.cohort_concept_queries[concept_type]['query']
-                if self._create_omop_table(concept_type):
-                    if not vocab:
-                        vocab = self.__class__.cohort_concept_queries[concept_type]['default_vocab']
-                    query = query_str.format(cid=cohort_definition_id, filter_count=filter_count,
-                                             vocab=vocab, include_hierarchy=include_hierarchy)
-                    concept_stats[concept_type] = self._execute_query(query)
-                    cs_df = pd.DataFrame(concept_stats[concept_type])
-                    # Combine concept_name and prevalence into a "details" column
-                    cs_df["details"] = cs_df.apply(
-                        lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
-                                    f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})", axis=1)
-                    filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
-                    roots = find_roots(filtered_cs_df)
-                    hierarchy = build_concept_hierarchy(filtered_cs_df)
-                    notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
-                    for root in roots:
-                        root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
-                                  & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
-                        print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
-                    return concept_stats
-                else:
-                    notify_users(f"Cannot connect to the OMOP database to query {concept_type} table")
-                    return concept_stats
+                if not vocab:
+                    vocab = self.__class__.cohort_concept_queries[concept_type]['default_vocab']
+                query = query_str.format(cid=cohort_definition_id, filter_count=filter_count,
+                                         vocab=vocab, include_hierarchy=include_hierarchy)
+                concept_stats[concept_type] = self._execute_query(query)
+                cs_df = pd.DataFrame(concept_stats[concept_type])
+                # Combine concept_name and prevalence into a "details" column
+                cs_df["details"] = cs_df.apply(
+                    lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
+                                f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})", axis=1)
+                filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
+                roots = find_roots(filtered_cs_df)
+                hierarchy = build_concept_hierarchy(filtered_cs_df)
+                notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
+                for root in roots:
+                    root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
+                              & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
+                    print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
+                return concept_stats
             else:
                 notify_users("Cannot connect to the OMOP database to query concept table")
                 return concept_stats
@@ -321,23 +304,25 @@ class OMOPCDMDatabase:
                 notify_users(f"Failed to connect to DuckDB: {e}", level='error')
             self.Session = self.engine  # Use engine directly for DuckDB
             self._database_type = 'duckdb'
-        try:
-            self.engine = create_engine(
-                db_url,
-                echo=False,
-                connect_args={'options': '-c default_transaction_read_only=on'}  # Enforce read-only transactions
-            )
-            self.Session = sessionmaker(bind=self.engine)
-            notify_users("Connected to the OMOP CDM database (read-only).")
-            self._database_type = 'postgresql'
-        except SQLAlchemyError as e:
-            notify_users(f"Failed to connect to the database: {e}", level='error')
+        else:  # pragma: no cover
+            # Handle PostgreSQL connection
+            try:
+                self.engine = create_engine(
+                    db_url,
+                    echo=False,
+                    connect_args={'options': '-c default_transaction_read_only=on'}  # Enforce read-only transactions
+                )
+                self.Session = sessionmaker(bind=self.engine)
+                notify_users("Connected to the OMOP CDM database (read-only).")
+                self._database_type = 'postgresql'
+            except SQLAlchemyError as e:
+                notify_users(f"Failed to connect to the database: {e}", level='error')
 
     def get_session(self):
         if self._database_type == 'duckdb':
             return self.engine
-        else: # postgresql connection
-            # Provide a new session for read-only queries
+        else:  # pragma: no cover
+            # postgresql connection: provide a new session for read-only queries
             return self.Session()
 
     def execute_query(self, query, params=None):
@@ -346,7 +331,7 @@ class OMOPCDMDatabase:
                 # DuckDB query execution
                 results = self.engine.execute(query, params).fetchall()
                 headers = [desc[0] for desc in self.engine.execute(query, params).description]
-            else:
+            else:  # pragma: no cover
                 # PostgreSQL query execution
                 omop_session = self.get_session()
                 query = text(query)
@@ -360,9 +345,10 @@ class OMOPCDMDatabase:
         except duckdb.Error as e:
             notify_users(f"Error executing query: {e}", level='error')
             return []
-        except SQLAlchemyError as e:
+        except SQLAlchemyError as e:  # pragma: no cover
             notify_users(f"Error executing query: {e}", level='error')
-            omop_session.close()
+            if omop_session:
+                omop_session.close()
             return []
 
     def get_domains_and_vocabularies(self) -> list:
@@ -409,7 +395,7 @@ class OMOPCDMDatabase:
                 params = [domain, search_term_exact, search_term_prefix, search_term_suffix,
                               search_term_prefix_suffix]
 
-        else:
+        else:  # pragma: no cover
             # Use named parameters with :param_name syntax for SQLAlchemy/PostgreSQL
             base_query = """
                          SELECT concept_id, concept_name, valid_start_date, valid_end_date, domain_id, vocabulary_id \

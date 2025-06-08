@@ -139,7 +139,7 @@ def test_cohort_creation_study2(caplog, test_db):
     assert_equal(len(patient_ids), 1)
     assert_equal(patient_ids, {106})
 
-def test_cohort_creation_all(test_db):
+def test_cohort_creation_all(caplog, test_db):
     bias = test_db
     cohort = bias.create_cohort(
         "COVID-19 patient",
@@ -156,6 +156,13 @@ def test_cohort_creation_all(test_db):
     assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
     stats = cohort.get_stats()
     assert stats is not None, "Created cohort's stats is None"
+    gender_stats = cohort.get_stats(variable='gender')
+    assert gender_stats is not None, "Created cohort's gender stats is None"
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        cohort.get_stats(variable='address')
+    assert 'is not available' in caplog.text
+    assert gender_stats is not None, "Created cohort's gender stats is None"
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
     patient_ids = set([item['subject_id'] for item in cohort.data])
     print(f'patient_ids: {patient_ids}', flush=True)

@@ -1,5 +1,6 @@
 import duckdb
 import pytest
+import logging
 from biasanalyzer.database import BiasDatabase
 
 
@@ -19,6 +20,10 @@ def test_create_omop_table_postgres(monkeypatch):
     # Now create the instance (so it uses the patched class method)
     BiasDatabase._instance = None
     db = BiasDatabase(":memory:")
+    db.omop_cdm_db_url = None
+    result = db._create_omop_table("person")
+    assert result is False
+
     db.omop_cdm_db_url = "postgresql://user:pass@localhost:5432/mydb"
 
     result = db._create_omop_table("person")
@@ -144,3 +149,26 @@ def test_create_cohort_index_exists():
 
     assert db.conn.call_count >= 2
     assert any("CREATE INDEX" in sql for sql in db.conn.executed_sql)
+
+def test_get_cohort_concept_stats_handles_exception(caplog):
+    BiasDatabase._instance = None
+    db = BiasDatabase(":memory:")
+    db.omop_cdm_db_url = 'duckdb'
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        result = db.get_cohort_concept_stats(123)
+    assert 'Error computing cohort concept stats' in caplog.text
+    assert result == {}
+
+def test_get_cohort_attributes_handles_exception():
+    BiasDatabase._instance = None
+    db = BiasDatabase(":memory:")
+
+    db.omop_cdm_db_url = None
+    result_stats = db.get_cohort_basic_stats(123, variable='age')
+    assert result_stats is None
+    result = db.get_cohort_distributions(123, 'age')
+    assert result is None
+    result = db.get_cohort_concept_stats(123)
+    assert result == {}
+
