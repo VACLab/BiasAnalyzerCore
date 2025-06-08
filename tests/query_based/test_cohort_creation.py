@@ -1,9 +1,58 @@
 import os
 import datetime
 import logging
+import pytest
 from sqlalchemy.exc import SQLAlchemyError
 from numpy.ma.testutils import assert_equal
+from biasanalyzer.models import DemographicsCriteria, TemporalEvent, TemporalEventGroup
 
+
+def test_cohort_yaml_validation(test_db):
+    invalid_data = {
+        "gender": "female",
+        "min_birth_year": 2000,
+        "max_birth_year": 1999  # Invalid: less than min_birth_year
+    }
+    with pytest.raises(ValueError):
+        DemographicsCriteria(**invalid_data)
+
+    invalid_data = {
+        "event_type": "date",
+        "event_concept_id": "dummy"
+    }
+    # validate date event_type must have a timestamp field
+    with pytest.raises(ValueError):
+        TemporalEvent(**invalid_data)
+
+    invalid_data = {
+        "operator": "BEFORE",
+        "events": [
+            {'event_type': 'condition_occurrence',
+             'event_concept_id': 201826},
+            {'event_type': 'drug_exposure',
+             'event_concept_id': 4285892},
+        ],
+        "interval": [100, 50]
+    }
+    # validate interval start must be smaller than interval end
+    with pytest.raises(ValueError):
+        TemporalEventGroup(**invalid_data)
+
+    # validate interval must be either a list of 2 integers or a None
+    invalid_data["interval"] = [123]
+    with pytest.raises(ValueError):
+        TemporalEventGroup(**invalid_data)
+
+    # validate NOT operator cannot have more than one event
+    invalid_data["operator"] = "NOT"
+    with pytest.raises(ValueError):
+        TemporalEventGroup(**invalid_data)
+
+    # validate BEFORE operator must have two events
+    invalid_data["operator"] = "BEFORE"
+    del invalid_data["events"][1]
+    with pytest.raises(ValueError):
+        TemporalEventGroup(**invalid_data)
 
 def test_cohort_creation_baseline(caplog, test_db):
     bias = test_db

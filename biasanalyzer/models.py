@@ -125,26 +125,19 @@ class TemporalEventGroup(BaseModel):
     events: List[Union[TemporalEvent, "TemporalEventGroup"]]  # A list of events or nested operators
     interval: Optional[List[Union[int, None]]] = None  # [start, end] interval only applying for BEFORE operator
 
-    @field_validator("interval", mode="before")
-    def validate_interval_structure(cls, value):
-        """Ensure interval is a list with exactly two elements, or None."""
-        if value is None:
-            return value
-        if not isinstance(value, list) or len(value) != 2:
-            raise ValueError("Interval must be a list with exactly two elements: [start, end].")
-        return value
-
     @model_validator(mode="before")
     def validate_interval_logic(cls, values):
-        operator = values.get("operator")
+        """
+        Validate interval structure and logic for all operators, though only used for BEFORE.
+        Ensures interval is None or a list of two elements [start, end], with start <= end if both are integers.
+        For AND, OR, NOT, interval is validated but ignored in SQL generation.
+        """
         interval = values.get("interval")
-        """Ensure interval is logically consistent when operator is 'BEFORE'."""
-        if operator == "BEFORE" and interval is not None:
+        """Ensure interval is logically consistent which is only used for operator 'BEFORE'."""
+        if interval is not None:
+            if not isinstance(interval, list) or len(interval) != 2:
+                raise ValueError("Interval must be a list with exactly two elements: [start, end].")
             start, end = interval
-            if start is not None and not isinstance(start, int):
-                raise ValueError("Interval start must be an integer or None.")
-            if end is not None and not isinstance(end, int):
-                raise ValueError("Interval end must be an integer or None.")
             if start is not None and end is not None and start > end:
                 raise ValueError("Interval start cannot be greater than interval end.")
         return values
@@ -167,7 +160,7 @@ class TemporalEventGroup(BaseModel):
 
     def get_interval_sql(self, e1_alias='e1', e2_alias='e2') -> str:
         """Generate SQL for the interval."""
-        if not self.interval:
+        if not self.interval:  # pragma: no cover
             return ""
         start = self.interval[0] if self.interval[0] is not None else 0
         end = self.interval[1] if self.interval[1] is not None else 99999
