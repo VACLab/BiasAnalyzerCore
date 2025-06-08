@@ -132,11 +132,15 @@ def test_get_concepts_no_domain_and_vocab(caplog, test_db):
 
 def test_get_concepts(test_db):
     concepts = test_db.get_concepts('Heart failure', domain='Condition', vocabulary='SNOMED')
-    print(f'concepts: {concepts}', flush=True)
     expected = [{'concept_id': 316139, 'concept_name': 'Heart failure',
                  'valid_start_date': datetime.date(2012, 4, 1),
                  'valid_end_date': datetime.date(2020, 4, 1),
                  'domain_id': 'Condition', 'vocabulary_id': 'SNOMED'}]
+    assert concepts == expected
+    concepts = test_db.get_concepts('Heart failure', vocabulary='SNOMED')
+    assert concepts == expected
+    concepts = test_db.get_concepts('Heart failure', domain='Condition')
+    print(f'concepts: {concepts}', flush=True)
     assert concepts == expected
 
 def test_get_concept_hierarchy_no_omop_cdm(caplog, fresh_bias_obj):

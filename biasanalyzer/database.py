@@ -296,7 +296,8 @@ class BiasDatabase:
             return concept_stats
 
     def close(self):
-        self.conn.close()
+        if self.conn:
+            self.conn.close()
         BiasDatabase._instance = None
         notify_users("Connection to BiasDatabase closed.")
 
@@ -316,7 +317,7 @@ class OMOPCDMDatabase:
             try:
                 self.engine = duckdb.connect(db_url)
                 notify_users(f"Connected to the DuckDB database: {db_url}.")
-            except duckdb.Error as e:
+            except duckdb.Error as e:  # pragma: no cover
                 notify_users(f"Failed to connect to DuckDB: {e}", level='error')
             self.Session = self.engine  # Use engine directly for DuckDB
             self._database_type = 'duckdb'
@@ -532,6 +533,6 @@ class OMOPCDMDatabase:
         if isinstance(self.engine, duckdb.DuckDBPyConnection):
             self.engine.close()
         else:
-            self.engine.dispose()
+            self.engine.dispose()  # pragma: no cover
         OMOPCDMDatabase._instance = None
         notify_users("Connection to the OMOP CDM database closed.")
