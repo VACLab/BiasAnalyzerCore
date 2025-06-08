@@ -63,8 +63,12 @@ def test_cohort_creation_baseline(caplog, test_db):
                      'test_cohort_creation_condition_occurrence_config_baseline.yaml'),
         "test_user"
     )
+
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"
+    cohort_id = cohort.cohort_id
+    assert bias.bias_db.get_cohort_definition(cohort_id)['name'] == "COVID-19 patient"
+    assert bias.bias_db.get_cohort_definition(cohort_id + 1) == {}
     assert cohort.metadata is not None, "Cohort creation wrongly returned None metadata"
     assert 'creation_info' in cohort.metadata, "Cohort creation does not contain 'creation_info' key"
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
