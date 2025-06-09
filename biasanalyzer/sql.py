@@ -5,6 +5,7 @@ AGE_DISTRIBUTION_QUERY = '''
         SELECT p.person_id, 
                EXTRACT(YEAR FROM
                    COALESCE(
+                       c.cohort_start_date,
                        c.cohort_end_date,
                        CURRENT_DATE
                    )
@@ -82,6 +83,7 @@ AGE_STATS_QUERY = '''
         SELECT p.person_id,
             EXTRACT(YEAR FROM
                    COALESCE(
+                       c.cohort_start_date,
                        c.cohort_end_date,
                        CURRENT_DATE
                    )

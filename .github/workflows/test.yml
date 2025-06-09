@@ -39,4 +39,4 @@ jobs:
     # Step 5: Run Tests
     - name: Run tests
       run: |
-        poetry run pytest -s --cov=biasanalyzer
+        poetry run pytest -s --cov=biasanalyzer --cov-config=.coveragerc

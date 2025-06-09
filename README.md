@@ -22,7 +22,7 @@ to install the python package from this github repo.
 - Run `bias = BIAS()` to create an object of the imported BIAS class.
 - Create a config.yaml file for specifying OMOP database connection configuration information. 
 The config.yaml file must include root_omop_cdm_database key. 
-- [A test OMOP database configuration yaml file](https://github.com/VACLab/BiasAnalyzer/blob/main/tests/assets/test_config.yaml) 
+- [A test OMOP database configuration yaml file](https://github.com/VACLab/BiasAnalyzer/blob/main/tests/assets/config/test_config.yaml) 
 can serve as an example. Another config.yaml example for connecting to a OMOP postgreSQL database 
 is also copied below for reference.
   ```angular2html

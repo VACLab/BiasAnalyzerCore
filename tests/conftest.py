@@ -5,9 +5,17 @@ from biasanalyzer.config import load_config
 import os
 
 
+@pytest.fixture
+def fresh_bias_obj():
+    """Provides a fresh BIAS() object with no config set — safe for testing invalid config scenarios."""
+    bias = BIAS()
+    yield bias
+    bias.cleanup()
+
+
 @pytest.fixture(scope="session")
 def test_db():
-    config_file = os.path.join(os.path.dirname(__file__), '..', 'assets', 'test_config.yaml')
+    config_file = os.path.join(os.path.dirname(__file__), 'assets', 'config', 'test_config.yaml')
     config = load_config(config_file)
     db_path = config['root_omop_cdm_database']['database']
     conn = duckdb.connect(db_path)
@@ -24,8 +32,11 @@ def test_db():
             CREATE TABLE IF NOT EXISTS concept (
                 concept_id INTEGER PRIMARY KEY,
                 concept_name TEXT,
+                valid_start_date DATE, 
+                valid_end_date DATE,
                 concept_code TEXT,
-                vocabulary_id TEXT
+                vocabulary_id TEXT,
+                domain_id TEXT
             );
         """)
     conn.execute("""
@@ -119,17 +130,18 @@ def test_db():
     result = conn.execute("SELECT COUNT(*) FROM concept").fetchone()
     if result[0] == 0:
         conn.execute("""
-                INSERT INTO concept (concept_id, concept_name, concept_code, vocabulary_id)
+                INSERT INTO concept (concept_id, concept_name, valid_start_date, valid_end_date, concept_code, 
+                                     vocabulary_id, domain_id)
                 VALUES
-                    (4274025, 'Disease', '64572001', 'SNOMED'), 
-                    (1, 'Diabetes Mellitus', 'E10-E14', 'ICD10CM'), 
-                    (2, 'Type 1 Diabetes Mellitus', 'E10', 'ICD10CM'),
-                    (3, 'Type 2 Diabetes Mellitus', 'E11', 'ICD10CM'), 
-                    (4, 'Diabetic Retinopathy', 'E10.3/E11.3', 'ICD10CM'), 
-                    (5, 'Fever', 'R50.9', 'ICD10CM'),
-                    (37311061, 'COVID-19', '840539006', 'SNOMED'),
-                    (4041664, 'Difficulty breathing', '230145002', 'SNOMED'),
-                    (316139, 'Heart failure', '84114007', 'SNOMED');
+                    (4274025, 'Disease', '2012-04-01', '2020-04-01', '64572001', 'SNOMED', 'Condition'), 
+                    (1, 'Diabetes Mellitus', '2012-04-01', '2020-04-01', 'E10-E14', 'ICD10CM', 'Condition'), 
+                    (2, 'Type 1 Diabetes Mellitus', '2012-04-01', '2020-04-01', 'E10', 'ICD10CM', 'Condition'),
+                    (3, 'Type 2 Diabetes Mellitus', '2012-04-01', '2020-04-01', 'E11', 'ICD10CM', 'Condition'), 
+                    (4, 'Diabetic Retinopathy', '2012-04-01', '2020-04-01', 'E10.3/E11.3', 'ICD10CM', 'Condition'), 
+                    (5, 'Fever', '2012-04-01', '2020-04-01', 'R50.9', 'ICD10CM', 'Condition'),
+                    (37311061, 'COVID-19', '2012-04-01', '2020-04-01', '840539006', 'SNOMED', 'Condition'),
+                    (4041664, 'Difficulty breathing', '2012-04-01', '2020-04-01', '230145002', 'SNOMED', 'Condition'),
+                    (316139, 'Heart failure', '2012-04-01', '2020-04-01', '84114007', 'SNOMED', 'Condition');
             """)
 
     # Insert hierarchical relationships as needed
@@ -240,8 +252,7 @@ def test_db():
 
 
     # mock configuration file
-    bias = BIAS()
-    bias.set_config(config_file)
+    bias = BIAS(config_file_path=config_file)
     bias.set_root_omop()
 
     yield bias  # Provide the connection to the test

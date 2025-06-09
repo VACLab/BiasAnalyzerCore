@@ -1,6 +1,3 @@
-import pytest
-
-@pytest.mark.usefixtures
 def test_cohort_concept_hierarchical_prevalence(test_db):
     bias = test_db
     cohort_query = """
@@ -18,6 +15,10 @@ def test_cohort_concept_hierarchical_prevalence(test_db):
     )
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"
+    # test cohort.get_concept_stats only supports concept stats for condition_occurrence and drug_exposures currently
+    concept_stats = cohort.get_concept_stats(concept_type='procedure_occurrence')
+    assert concept_stats == {}
+
     include_hierarchy_flags = [True, False]
     for flag in include_hierarchy_flags:
         concept_stats = cohort.get_concept_stats(include_hierarchy=flag)

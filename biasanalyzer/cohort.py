@@ -4,10 +4,10 @@ import pandas as pd
 from datetime import datetime
 from tqdm.auto import tqdm
 from pydantic import ValidationError
-from biasanalyzer.models import CohortDefinition, Cohort
+from biasanalyzer.models import CohortDefinition
 from biasanalyzer.config import load_cohort_creation_config
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
-from biasanalyzer.utils import hellinger_distance, clean_string
+from biasanalyzer.utils import hellinger_distance, clean_string, notify_users
 from biasanalyzer.cohort_query_builder import CohortQueryBuilder
 
 
@@ -99,12 +99,11 @@ class CohortAction:
                 cohort_config = load_cohort_creation_config(query_or_yaml_file)
                 tqdm.write(f'configuration specified in {query_or_yaml_file} loaded successfully')
             except FileNotFoundError:
-                print('specified cohort creation configuration file does not exist. Make sure '
-                      'the configuration file name with path is specified correctly.')
+                notify_users('specified cohort creation configuration file does not exist. Make sure '
+                             'the configuration file name with path is specified correctly.')
                 return None
             except ValidationError as ex:
-                print(f'cohort creation configuration yaml file is not valid with '
-                      f'validation error: {ex}')
+                notify_users(f'cohort creation configuration yaml file is not valid with validation error: {ex}')
                 return None
 
             query = self._query_builder.build_query(cohort_config)
@@ -139,11 +138,12 @@ class CohortAction:
             tqdm.write(f"Cohort {cohort_name} successfully created.")
             return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
         except duckdb.Error as e:
-            print(f"Error executing query: {e}")
+            notify_users(f"Error executing query: {e}")
             return None
         except SQLAlchemyError as e:
-            print(f"Error executing query: {e}")
-            omop_session.close()
+            notify_users(f"Error executing query: {e}")
+            if omop_session is not None:
+                omop_session.close()
             return None
 
     def compare_cohorts(self, cohort_id_1: int, cohort_id_2: int):

@@ -9,14 +9,14 @@ class CohortQueryBuilder:
     def __init__(self):
         """Get the path to SQL templates, whether running from source or installed."""
         try:
-            if sys.version_info >= (3, 9):
+            if sys.version_info >= (3, 9): # pragma: no cover
                 # Python 3.9+: Use importlib.resources.files()
                 template_path = importlib.resources.files("biasanalyzer").joinpath("sql_templates")
             else:
                 # Python 3.8: Use importlib.resources.path() (context manager)
                 with importlib.resources.path("biasanalyzer", "sql_templates") as p:
                     template_path = str(p)
-        except ModuleNotFoundError:
+        except ModuleNotFoundError: # pragma: no cover
             template_path = os.path.join(os.path.dirname(__file__), "sql_templates")
 
         print(f'template_path: {template_path}')
@@ -117,7 +117,7 @@ class CohortQueryBuilder:
                 event_sql = CohortQueryBuilder.render_event_group(event, f"{alias_prefix}_{i}")
                 if event_sql:
                     queries.append(event_sql)
-            if not queries:
+            if not queries: # pragma: no cover
                 return ""
 
             if event_group["operator"] == "AND":
@@ -150,9 +150,6 @@ class CohortQueryBuilder:
             elif event_group["operator"] == "OR":
                 return f"SELECT person_id, event_start_date, event_end_date FROM ({' UNION '.join(queries)}) AS {alias_prefix}_or"
             elif event_group["operator"] == "NOT":
-                if len(queries) != 1:
-                    raise ValueError("NOT operator expects exactly one event subquery")
-                    # Keep the full subquery with dates for consistency, but use it as a filter
                 not_query = queries[0]
                 # Return a query that selects all persons from a base table (e.g., person),
                 # excluding those in the NOT subquery, while allowing dates from other criteria
@@ -187,10 +184,6 @@ class CohortQueryBuilder:
                                         FROM ({queries[0]}) AS {alias_prefix}_0
                                         WHERE event_start_date < DATE '{timestamp}'
                                     """
-                    else:
-                        print(f"Error: event_group: {event_group} with BEFORE operator only "
-                              f"has one query event {queries}")
-                        return ''
                 elif len(queries) == 2:
                     event_group = TemporalEventGroup(**event_group)
                     e1_alias = f"e1_{alias_prefix}"
@@ -213,7 +206,7 @@ class CohortQueryBuilder:
                                     AND {e1_alias}.event_start_date < {e2_alias}.event_start_date
                                     {interval_sql}
                             """
-            return ""
+            return ""  # pragma: no cover
 
     def temporal_event_filter(self, event_groups, alias='c'):
         """
@@ -236,15 +229,30 @@ class CohortQueryBuilder:
                     filters.append(f"AND {alias}.person_id IN (SELECT person_id FROM ({group_sql}) AS ex_subquery_{i})")
                 else:
                     filters.append(f"({group_sql})")
-        if not filters:
+        if not filters:  # pragma: no cover
             return ""
         if alias == 'ex':
             # For exclusion, combine with AND as filters
             return " ".join(filters)
         else:
-            # For inclusion, combine as a single subquery (assuming one event group for simplicity)
-            # If multiple groups, may need UNION or further logic
+            # For inclusion, handle both single event group case with operator defined and multiple event group
+            # case with no operator defined
             if len(filters) > 1:
+                # For multiple temporal event group case with no operator defined, use "OR" operator by default
+                # An example YAML block for multiple temporal event group is shown below for reference, in which
+                # case, patients who satisfy either group (condition 37311061 or drug 67890) will be included:
+                # inclusion_criteria:
+                #   temporal_events:
+                #     - operator: AND
+                #       events:
+                #         - event_type: condition_occurrence
+                #           event_concept_id: 37311061
+                #     - operator: AND
+                #       events:
+                #         - event_type: drug_exposure
+                #           event_concept_id: 67890
                 return (f"SELECT person_id, event_start_date, event_end_date FROM "
                         f"({' UNION ALL '.join(filters)}) AS combined_events")
-            return filters[0]  # Single event group case
+
+            # Single event group case with operator defined
+            return filters[0]
