@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "A python package for health data bias quantification to support visual analytics techniques for tracking and communicating bias in cohort selection"
 authors = ["Hong Yi <hongyi@renci.org>"]
 readme = "README.md"
+license="MIT"
+keywords=["bias", "healthcare", "cohort", "OMOP", "analytics", "observational research"]
 include = [
     {path = "biasanalyzer/sql_templates/*.sql", format=["sdist", "wheel"]}
 ]
@@ -28,9 +30,6 @@ pytest = "^8.3.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest-cov = "5.0.0"
-
-[tool.setuptools.package-data]
-biasanalyzer = ["biasanalyzer/sql_templates/*.sql"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
