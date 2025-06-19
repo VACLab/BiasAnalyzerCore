@@ -1,4 +1,6 @@
-def test_cohort_concept_hierarchical_prevalence(test_db):
+import logging
+
+def test_cohort_concept_hierarchical_prevalence(test_db, caplog):
     bias = test_db
     cohort_query = """
         SELECT person_id, condition_concept_id, 
@@ -15,13 +17,27 @@ def test_cohort_concept_hierarchical_prevalence(test_db):
     )
     # Test cohort object and methods
     assert cohort is not None, "Cohort creation failed"
-    # test cohort.get_concept_stats only supports concept stats for condition_occurrence and drug_exposures currently
-    concept_stats = cohort.get_concept_stats(concept_type='procedure_occurrence')
+    # test concept_type must be one of the supported OMOP domain name
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        concept_stats = cohort.get_concept_stats(concept_type='dummy_invalid')
+    assert 'Invalid concept_type' in caplog.text
     assert concept_stats == {}
+
+    # test vocab must be None to use the default vocab or one of the supported OMOP vocabulary id
+    caplog.clear()
+    with caplog.at_level(logging.ERROR):
+        concept_stats = cohort.get_concept_stats(vocab='dummy_invalid_vocab')
+    assert 'is not a valid vocabulary' in caplog.text
+    assert concept_stats == {}
+
+    # test the cohort does not have procedure_occurrence related concepts
+    concept_stats = cohort.get_concept_stats(concept_type='procedure_occurrence')
+    assert concept_stats == {'procedure_occurrence': []}
 
     include_hierarchy_flags = [True, False]
     for flag in include_hierarchy_flags:
-        concept_stats = cohort.get_concept_stats(include_hierarchy=flag)
+        concept_stats = cohort.get_concept_stats(vocab='ICD10CM', include_hierarchy=flag)
         assert concept_stats is not None, "Failed to fetch concept stats"
         assert len(concept_stats) > 0, "No concept stats returned"
         # check returned data with different include_hierarchy flag

@@ -6,7 +6,7 @@ from tqdm.auto import tqdm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
-from biasanalyzer.models import Cohort, CohortDefinition
+from biasanalyzer.models import CohortDefinition
 from biasanalyzer.sql import *
 from biasanalyzer.utils import build_concept_hierarchy, print_hierarchy, find_roots, notify_users
 
@@ -21,16 +21,6 @@ class BiasDatabase:
         "gender": GENDER_STATS_QUERY,
         "race": RACE_STATS_QUERY,
         "ethnicity": ETHNICITY_STATS_QUERY
-    }
-    cohort_concept_queries = {
-        'condition_occurrence': {
-            'query': COHORT_CONCEPT_CONDITION_PREVALENCE_QUERY,
-            'default_vocab': 'SNOMED'
-        },
-        'drug_exposure': {
-            'query': COHORT_CONCEPT_DRUG_PREVALENCE_QUERY,
-            'default_vocab': 'RxNorm'
-        }
     }
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
@@ -142,7 +132,7 @@ class BiasDatabase:
         return [dict(zip(headers, row)) for row in rows]
 
     def _create_omop_table(self, table_name):
-        if self.omop_cdm_db_url is not None and not self.omop_cdm_db_url.endswith('.duckdb'):
+        if self.omop_cdm_db_url is not None and not self.omop_cdm_db_url.endswith('duckdb'):
             # need to create person table from OMOP CDM postgreSQL database
             self.conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table_name} AS 
@@ -237,25 +227,29 @@ class BiasDatabase:
             notify_users(f"Error computing cohort {variable} distributions: {e}", level='error')
             return None
 
-    def get_cohort_concept_stats(self, cohort_definition_id: int,
+    def get_cohort_concept_stats(self, cohort_definition_id: int, qry_builder,
                                  concept_type='condition_occurrence', filter_count=0, vocab=None,
                                  include_hierarchy=False):
         """
         Get concept statistics for a cohort from the cohort table.
         """
         concept_stats = {}
-        if concept_type not in self.__class__.cohort_concept_queries:
-            notify_users(f"input {concept_type} is not a valid concept type. "
-                         f"Supported concept types are: {self.__class__.cohort_concept_queries.keys()}", level='error')
-            return concept_stats
+
         try:
             if (self._create_omop_table('concept') and self._create_omop_table('concept_ancestor')
                     and self._create_omop_table(concept_type)):
-                query_str = self.__class__.cohort_concept_queries[concept_type]['query']
-                if not vocab:
-                    vocab = self.__class__.cohort_concept_queries[concept_type]['default_vocab']
-                query = query_str.format(cid=cohort_definition_id, filter_count=filter_count,
-                                         vocab=vocab, include_hierarchy=include_hierarchy)
+                # validate input vocab if it is not None
+                if vocab is not None:
+                    valid_vocabs = self._execute_query("SELECT distinct vocabulary_id FROM concept")
+                    valid_vocab_ids = [row['vocabulary_id'] for row in valid_vocabs]
+                    if vocab not in valid_vocab_ids:
+                        notify_users(f"input {vocab} is not a valid vocabulary in OMOP. "
+                                     f"Supported vocabulary ids are: {valid_vocab_ids}",
+                                     level='error')
+                        return concept_stats
+
+                query = qry_builder.build_concept_prevalence_query(concept_type, cohort_definition_id,
+                                                                   filter_count, vocab, include_hierarchy)
                 concept_stats[concept_type] = self._execute_query(query)
                 cs_df = pd.DataFrame(concept_stats[concept_type])
                 # Combine concept_name and prevalence into a "details" column
