@@ -104,7 +104,7 @@ only hellinger distances between distributions of two cohorts are computed.
 - After all analysis is done, please make sure to close database connections and do necessary cleanups by calling 
 the API method `bias.cleanup()`.
 
---
+---
 
 ## 📘 Tutorial Notebooks
 
@@ -119,4 +119,4 @@ directory. These tutorials walk users through key features and workflows with il
 | [BiasAnalyzerCohortConceptTutorial.ipynb](https://github.com/VACLab/BiasAnalyzer/blob/main/notebooks/BiasAnalyzerCohortConceptTutorial.ipynb) | Demonstrates how to explore clinical concept prevalence within a cohort, helping users analyze clinical concept prevalence and identify potential cohort selection biases.                                            |
 | [BiasAnalyzerConceptBrowsingTutorial.ipynb](https://github.com/VACLab/BiasAnalyzer/blob/main/notebooks/BiasAnalyzerConceptBrowsingTutorial.ipynb) | Guides users through browsing OMOP concepts, domains, and vocabularies, including how to retrieve and visualize concept hierarchies.                                                                                  |
 
-These tutorials are designed to be run in a Jupyter environment with access to an OMOP-compatible postgreSQL or DuckDB database. 
+These tutorials are designed to run in a Jupyter environment with access to an OMOP-compatible postgreSQL or DuckDB database. 
