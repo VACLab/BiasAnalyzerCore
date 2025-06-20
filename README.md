@@ -57,7 +57,7 @@ containing a list of the concept's children or parents in the hierarchy.
 - Call `bias.display_concept_tree(parent_concept_tree)` and `bias.display_concept_tree(children_concept_tree)` to display 
 the concept hierarchical tree in an indented text format. If ipytree widget is installed and supported in a Jupyter notebook 
 environment, you can set `show_in_text_format` input parameter to `False` 
-(e.g., call `bias.display_concept_tree(parent_concept_tree,  show_in_text_format=False)`)to leverage the tree widget for displaying 
+(e.g., call `bias.display_concept_tree(parent_concept_tree,  show_in_text_format=False)`) to leverage the tree widget for displaying 
 the hierarchy in a tree that can be expanded and collapsed on demand interactively.   
 
 In addition to exploring the concepts using BiasAnalyzer APIs, the main functionalities of the BiasAnalyzer is 
@@ -88,10 +88,13 @@ The following code snippets show some examples.
   ```
   Note that currently the `get_stats()` method only returns statistics of age, gender, race, and ethinicity of a cohort 
 and `get_distributions()` method only returns distribution of age and gender in a cohort.
-- You can also get patient counts and prevalence with each diagnostic condition concept code in a cohort by accessing 
+- You can also explore concept prevalence within a cohort - a key step in identifying potential biases during 
+cohort selection. A concept refers to a coded term from a standardized medical vocabulary, uniquely identified by a 
+concept ID. All clinical events in OMOP, such as conditions, drug exposures, procedures, measurements, and events, are 
+represented as concepts. You can get patient counts and prevalence associated with each concept by accessing 
 the method `get_concept_stats()` with a code snippet example shown below.
   ```angular2html
-    cohort_concepts = baseline_cohort_data.get_concept_stats()
+    cohort_concepts = baseline_cohort_data.get_concept_stats(concept_type='condition_occurrence')
     print(pd.DataFrame(cohort_concepts["condition_occurrence"]))
   ```
 - There is also an API method that enables users to compare distributions of two cohorts by calling `bias.compare_cohorts(cohort1_id, cohort2_id)` 
@@ -100,3 +103,20 @@ only hellinger distances between distributions of two cohorts are computed.
 
 - After all analysis is done, please make sure to close database connections and do necessary cleanups by calling 
 the API method `bias.cleanup()`.
+
+--
+
+## 📘 Tutorial Notebooks
+
+To help users get started with the `BiasAnalyzer` python package, four Jupyter notebooks are 
+provided in the [`notebooks/`](https://github.com/VACLab/BiasAnalyzer/tree/main/notebooks) 
+directory. These tutorials walk users through key features and workflows with illustrative examples.
+
+| Tutorial | Description                                                                                                                                                                                                           |
+|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [BiasAnalyzerCohortsTutorial.ipynb](https://github.com/VACLab/BiasAnalyzer/blob/main/notebooks/BiasAnalyzerCohortsTutorial.ipynb) | Demonstrates how to create baseline and study cohorts, retrieve cohort statistics, and compare cohort distributions.                                                                                                  |
+| [BiasAnalyzerAsyncCohortsTutorial.ipynb](https://github.com/VACLab/BiasAnalyzer/blob/main/notebooks/BiasAnalyzerAsyncCohortsTutorial.ipynb) | As a companion to the Cohort tutorial above, demonstrates how to create and analyze cohorts asynchronously for improved performance and responsiveness when working with large datasets or complex cohort definitions. |
+| [BiasAnalyzerCohortConceptTutorial.ipynb](https://github.com/VACLab/BiasAnalyzer/blob/main/notebooks/BiasAnalyzerCohortConceptTutorial.ipynb) | Demonstrates how to explore clinical concept prevalence within a cohort, helping users analyze clinical concept prevalence and identify potential cohort selection biases.                                            |
+| [BiasAnalyzerConceptBrowsingTutorial.ipynb](https://github.com/VACLab/BiasAnalyzer/blob/main/notebooks/BiasAnalyzerConceptBrowsingTutorial.ipynb) | Guides users through browsing OMOP concepts, domains, and vocabularies, including how to retrieve and visualize concept hierarchies.                                                                                  |
+
+These tutorials are designed to be run in a Jupyter environment with access to an OMOP-compatible postgreSQL or DuckDB database. 
