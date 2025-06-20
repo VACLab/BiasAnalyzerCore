@@ -504,6 +504,7 @@ class OMOPCDMDatabase:
                 ancestor_id, {"details": concept_details[ancestor_id], "parents": []})
             desc_entry_rev["parents"].append(ancestor_entry_rev)
         progress.update(1)
+        progress.close()
 
         # Return the parent hierarchy and children hierarchy of the specified concept
         return reverse_hierarchy[concept_id], hierarchy[concept_id]
