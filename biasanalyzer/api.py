@@ -72,7 +72,6 @@ class BIAS:
         return self.cohort_action
 
     def get_domains_and_vocabularies(self):
-        print(f'self.omop_cdm_db: {self.omop_cdm_db}')
         if self.omop_cdm_db is None:
             notify_users('A valid OMOP CDM must be set before getting domains. '
                          'Call set_root_omop first to set a valid root OMOP CDM')
@@ -96,19 +95,18 @@ class BIAS:
             return None
         return self.omop_cdm_db.get_concept_hierarchy(concept_id)
 
-    def display_concept_tree(self, concept_tree: dict, level: int = 0, show_in_text_format=True, tree_type=None):
+    def display_concept_tree(self, concept_tree: dict, level: int = 0, show_in_text_format=True):
         """
         Recursively prints the concept hierarchy tree in an indented format for display.
         """
         details = concept_tree.get("details", {})
-        if tree_type is None or tree_type not in ['parents', 'children']:
-            if 'parents' in concept_tree:
-                tree_type = 'parents'
-            elif 'children' in concept_tree:
-                tree_type = 'children'
-            else:
-                notify_users('The input concept tree must contain parents or children key as the type of the tree.')
-                return ''
+        if 'parents' in concept_tree:
+            tree_type = 'parents'
+        elif 'children' in concept_tree:
+            tree_type = 'children'
+        else:
+            notify_users('The input concept tree must contain parents or children key as the type of the tree.')
+            return ''
 
         if show_in_text_format:
             if details:
@@ -119,7 +117,7 @@ class BIAS:
 
             for child in concept_tree.get(tree_type, []):
                 if child:
-                    self.display_concept_tree(child, level + 1, tree_type=tree_type, show_in_text_format=True)
+                    self.display_concept_tree(child, level + 1, show_in_text_format=True)
             # return empty string to print None being printed at the end of printout
             return ""
         else:

@@ -9,42 +9,49 @@ DOMAIN_MAPPING = {
         "concept_id": "condition_concept_id",
         "start_date": "condition_start_date",
         "end_date": "condition_end_date",
+        "default_vocab": "SNOMED"  # for use by concept prevalence query
     },
     "drug_exposure": {
         "table": "drug_exposure",
         "concept_id": "drug_concept_id",
         "start_date": "drug_exposure_start_date",
         "end_date": "drug_exposure_end_date",
+        "default_vocab": "RxNorm"  # for use by concept prevalence query
     },
     "procedure_occurrence": {
         "table": "procedure_occurrence",
         "concept_id": "procedure_concept_id",
         "start_date": "procedure_date",
         "end_date": "procedure_date",
+        "default_vocab": "SNOMED"  # for use by concept prevalence query
     },
     "visit_occurrence": {
         "table": "visit_occurrence",
         "concept_id": "visit_concept_id",
         "start_date": "visit_start_date",
         "end_date": "visit_end_date",
+        "default_vocab": "SNOMED"  # for use by concept prevalence query
     },
     "measurement": {
         "table": "measurement",
         "concept_id": "measurement_concept_id",
         "start_date": "measurement_date",
         "end_date": "measurement_date",
+        "default_vocab": "LOINC"  # for use by concept prevalence query
     },
     "observation": {
         "table": "observation",
         "concept_id": "observation_concept_id",
         "start_date": "observation_date",
         "end_date": "observation_date",
+        "default_vocab": "SNOMED"  # for use by concept prevalence query
     },
     "date": {  # Special case for static timestamps
         "table": None,
         "concept_id": None,
         "start_date": "timestamp",
        "end_date": "timestamp",
+        "default_vocab": None
     }
 }
 

@@ -1,0 +1,61 @@
+WITH cohort_events AS (
+    -- Compute the counts for each concept node
+    SELECT
+        e.{{ concept_id_column }} AS concept_id,
+        ct.subject_id
+    FROM
+        cohort ct
+    JOIN
+        {{ table_name }} e ON ct.subject_id = e.person_id
+        AND e.{{ start_date_column }} >= ct.cohort_start_date
+        AND (ct.cohort_end_date IS NULL OR e.{{ start_date_column }} <= ct.cohort_end_date)
+    WHERE ct.cohort_definition_id = {{ cid }}
+),
+aggregated_counts AS (
+    -- Aggregate counts for parent nodes using the concept_ancestor table
+    SELECT
+        ca.ancestor_concept_id AS concept_id,
+        COUNT(DISTINCT ce.subject_id) AS count_in_cohort
+    FROM
+        cohort_events ce
+    JOIN
+        concept_ancestor ca ON ce.concept_id = ca.descendant_concept_id
+    JOIN
+        concept anc ON ca.ancestor_concept_id = anc.concept_id
+    WHERE
+        anc.vocabulary_id = '{{ vocab }}'
+        AND ca.min_levels_of_separation >= 0
+    GROUP BY
+        ca.ancestor_concept_id
+),
+concept_hierarchy AS (
+    -- Retrieve the direct parent-child hierarchy for all concepts involved
+    SELECT
+        ca.ancestor_concept_id,
+        ca.descendant_concept_id
+    FROM
+        concept_ancestor ca
+    WHERE
+        ca.min_levels_of_separation <= 1
+        AND ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts WHERE count_in_cohort > {{ filter_count }})
+        AND ca.ancestor_concept_id IN (SELECT concept_id FROM aggregated_counts WHERE count_in_cohort > {{ filter_count }})
+)
+-- Combine counts and hierarchy with concept details
+SELECT DISTINCT
+    c.concept_name,
+    c.concept_code,
+    ac.count_in_cohort,
+    (ac.count_in_cohort * 1.0 / (SELECT COUNT(DISTINCT subject_id) FROM cohort WHERE cohort_definition_id = {{ cid }})) AS prevalence,
+    ch.ancestor_concept_id,
+    ch.descendant_concept_id
+FROM
+    aggregated_counts ac
+JOIN
+    concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
+JOIN
+    concept c ON ac.concept_id = c.concept_id
+WHERE
+    ac.count_in_cohort > {{ filter_count }}
+    AND ({{ include_hierarchy }} = True OR ch.ancestor_concept_id = ch.descendant_concept_id)
+ORDER BY
+    prevalence DESC;

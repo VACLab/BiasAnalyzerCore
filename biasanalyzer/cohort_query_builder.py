@@ -6,7 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 
 
 class CohortQueryBuilder:
-    def __init__(self):
+    def __init__(self, cohort_creation=True):
         """Get the path to SQL templates, whether running from source or installed."""
         try:
             if sys.version_info >= (3, 9): # pragma: no cover
@@ -19,12 +19,13 @@ class CohortQueryBuilder:
         except ModuleNotFoundError: # pragma: no cover
             template_path = os.path.join(os.path.dirname(__file__), "sql_templates")
 
-        print(f'template_path: {template_path}')
+        print(f'template_path: {template_path}, cohort_creation: {cohort_creation}')
         self.env = Environment(loader=FileSystemLoader(template_path), extensions=['jinja2.ext.do'])
-        self.env.globals.update(
-            demographics_filter=self._load_macro('demographics_filter'),
-            temporal_event_filter=self.temporal_event_filter
-        )
+        if cohort_creation:
+            self.env.globals.update(
+                demographics_filter=self._load_macro('demographics_filter'),
+                temporal_event_filter=self.temporal_event_filter
+            )
 
     def _extract_domains(self, events):
         domains = set()
@@ -42,16 +43,11 @@ class CohortQueryBuilder:
         macros_template = self.env.get_template('macros.sql.j2')
         return macros_template.module.__dict__[macro_name]
 
-
-    def build_query(self, cohort_config: dict) -> str:
+    def build_query_cohort_creation(self, cohort_config: dict) -> str:
         """
         Build a SQL query from the CohortCreationConfig object.
-
-        Args:
-            cohort_config: dict object loaded from yaml file for building sql query.
-
-        Returns:
-            str: The rendered SQL query.
+        :param cohort_config: dict object loaded from yaml file for building sql query.
+        :return: The rendered SQL query.
         """
         inclusion_criteria = cohort_config.get('inclusion_criteria')
         exclusion_criteria = cohort_config.get('exclusion_criteria', {})
@@ -73,6 +69,39 @@ class CohortQueryBuilder:
             exclusion_criteria=exclusion_criteria,
             ranked_domains=ranked_domains,
             temporal_events=temporal_events
+        )
+
+    def build_concept_prevalence_query(self, concept_type: str, cid: int, filter_count: int, vocab: str,
+                                       include_hierarchy: bool) -> str:
+        """
+        Build a SQL query for concept prevalence statistics for a given domain and cohort.
+        :param concept_type: Domain from DOMAIN_MAPPING (e.g., 'condition_occurrence').
+        :param cid: Cohort definition ID.
+        :param filter_count: Minimum count threshold for concepts with 0 meaning no filtering
+        :param vocab: Vocabulary ID. Defaults to domain-specific vocabulary as defined in DOMAIN_MAPPING if set to None
+        :param include_hierarchy: Include concept hierarchy in results or not
+        :return: The rendered SQL query
+        :raises ValueError if concept_type is not invalid
+        """
+
+        # Validate concept_type
+        if concept_type not in DOMAIN_MAPPING or DOMAIN_MAPPING[concept_type]["table"] is None:
+            valid_domains = [k for k in DOMAIN_MAPPING.keys() if DOMAIN_MAPPING[k]["table"] is not None]
+            raise ValueError(f"Invalid concept_type: {concept_type}. Must be one of {valid_domains}")
+
+        # The provided vocab is assumed to be already validated if it is not set to None. Otherwise,
+        # if set to None, use domain-specific default vocabulary
+        effective_vocab = vocab if vocab is not None else DOMAIN_MAPPING[concept_type]["default_vocab"]
+        # Load and render the template
+        template = self.env.get_template("cohort_concept_prevalence_query.sql.j2")
+        return template.render(
+            table_name=DOMAIN_MAPPING[concept_type]["table"],
+            concept_id_column=DOMAIN_MAPPING[concept_type]["concept_id"],
+            start_date_column=DOMAIN_MAPPING[concept_type]["start_date"],
+            cid=cid,
+            filter_count=filter_count,
+            vocab=effective_vocab,
+            include_hierarchy=include_hierarchy
         )
 
     @staticmethod

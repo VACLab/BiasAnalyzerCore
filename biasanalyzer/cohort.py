@@ -18,6 +18,7 @@ class CohortData:
         self.omop_db = omop_db
         self._cohort_data = None # cache the cohort data
         self._metadata = None
+        self.query_builder = CohortQueryBuilder(cohort_creation=False)
 
     @property
     def data(self):
@@ -55,6 +56,7 @@ class CohortData:
         Get cohort concept statistics such as concept prevalence
         """
         cohort_stats = self.bias_db.get_cohort_concept_stats(self.cohort_id,
+                                                             self.query_builder,
                                                              concept_type=concept_type,
                                                              filter_count=filter_count,
                                                              vocab=vocab,
@@ -106,7 +108,7 @@ class CohortAction:
                 notify_users(f'cohort creation configuration yaml file is not valid with validation error: {ex}')
                 return None
 
-            query = self._query_builder.build_query(cohort_config)
+            query = self._query_builder.build_query_cohort_creation(cohort_config)
         else:
             query = clean_string(query_or_yaml_file)
         progress.update(1)
