@@ -10,7 +10,7 @@ def load_config(config_file):
 
 
 def load_cohort_creation_config(config_file):
-    with open(config_file) as f:
+    with open(config_file, encoding='utf-8') as f:
         config = yaml.safe_load(f)
         CohortCreationConfig(**config)
         return config
