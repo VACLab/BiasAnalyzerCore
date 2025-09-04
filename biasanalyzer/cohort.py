@@ -118,31 +118,38 @@ class CohortAction:
         try:
             # Execute read-only query from OMOP CDM database
             result = self.omop_db.execute_query(query)
-            # Create CohortDefinition
-            cohort_def = CohortDefinition(
-                name=cohort_name,
-                description=description,
-                created_date=datetime.now().date(),
-                creation_info=clean_string(query),
-                created_by=created_by
-            )
-            cohort_def_id = self.bias_db.create_cohort_definition(cohort_def, progress_obj=tqdm)
-            progress.update(1)
+            if result:
+                # Create CohortDefinition
+                cohort_def = CohortDefinition(
+                    name=cohort_name,
+                    description=description,
+                    created_date=datetime.now().date(),
+                    creation_info=clean_string(query),
+                    created_by=created_by
+                )
+                cohort_def_id = self.bias_db.create_cohort_definition(cohort_def, progress_obj=tqdm)
+                progress.update(1)
 
-            progress.set_postfix_str(stages[2])
-            # Store cohort_definition and cohort data into BiasDatabase
-            cohort_df = pd.DataFrame(result)
-            cohort_df['cohort_definition_id'] = cohort_def_id
-            cohort_df = cohort_df.rename(columns={"person_id": "subject_id"})
-            self.bias_db.create_cohort_in_bulk(cohort_df)
-            progress.update(1)
+                progress.set_postfix_str(stages[2])
+                # Store cohort_definition and cohort data into BiasDatabase
+                cohort_df = pd.DataFrame(result)
+                cohort_df['cohort_definition_id'] = cohort_def_id
+                cohort_df = cohort_df.rename(columns={"person_id": "subject_id"})
+                self.bias_db.create_cohort_in_bulk(cohort_df)
+                progress.update(1)
 
-            tqdm.write(f"Cohort {cohort_name} successfully created.")
-            return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
+                tqdm.write(f"Cohort {cohort_name} successfully created.")
+                return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
+            else:
+                progress.update(2)
+                notify_users(f"No cohort is created due to empty results being returned from query")
+                return None
         except duckdb.Error as e:
+            progress.update(2)
             notify_users(f"Error executing query: {e}")
             return None
         except SQLAlchemyError as e:
+            progress.update(2)
             notify_users(f"Error executing query: {e}")
             if omop_session is not None:
                 omop_session.close()
