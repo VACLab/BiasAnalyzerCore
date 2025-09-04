@@ -32,20 +32,22 @@ class BiasDatabase:
     def _initialize(self, db_url):
         # by default, duckdb uses in memory database
         self.conn = duckdb.connect(db_url)
+        self.schema = "biasanalyzer"
+        self.conn.execute(f"CREATE SCHEMA IF NOT EXISTS {self.schema}")
         self.omop_cdm_db_url = None
         self._create_cohort_definition_table()
         self._create_cohort_table()
 
     def _create_cohort_definition_table(self):
         try:
-            self.conn.execute('CREATE SEQUENCE id_sequence START 1')
+            self.conn.execute(f'CREATE SEQUENCE {self.schema}.id_sequence START 1')
         except duckdb.Error as e:
             if "already exists" in str(e).lower():
                 notify_users("Sequence already exists, skipping creation.")
             else:
                 raise
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS cohort_definition (
+        self.conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS {self.schema}.cohort_definition (
                       id INTEGER DEFAULT nextval('id_sequence'), 
                       name VARCHAR NOT NULL, 
                       description VARCHAR, 
@@ -58,18 +60,19 @@ class BiasDatabase:
         notify_users("Cohort Definition table created.")
 
     def _create_cohort_table(self):
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS cohort (
+        self.conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS {self.schema}.cohort (
                 subject_id BIGINT,
                 cohort_definition_id INTEGER,
                 cohort_start_date DATE,
                 cohort_end_date DATE,
-                FOREIGN KEY (cohort_definition_id) REFERENCES cohort_definition(id)
+                FOREIGN KEY (cohort_definition_id) REFERENCES {self.schema}.cohort_definition(id)
             )
         ''')
         try:
-            self.conn.execute('''
-                CREATE INDEX idx_cohort_dates ON cohort (cohort_definition_id, cohort_start_date, cohort_end_date);
+            self.conn.execute(f'''
+                CREATE INDEX idx_cohort_dates ON {self.schema}.cohort (cohort_definition_id, cohort_start_date, 
+                cohort_end_date);
             ''')
         except duckdb.Error as e:
             if "already exists" in str(e).lower():
@@ -83,8 +86,8 @@ class BiasDatabase:
         self.conn.execute("LOAD postgres_scanner;")
 
     def create_cohort_definition(self, cohort_definition: CohortDefinition, progress_obj=None):
-        self.conn.execute('''
-            INSERT INTO cohort_definition (name, description, created_date, creation_info, created_by)
+        self.conn.execute(f'''
+            INSERT INTO {self.schema}.cohort_definition (name, description, created_date, creation_info, created_by)
             VALUES (?, ?, ?, ?, ?)
         ''', (
             cohort_definition.name,
@@ -97,7 +100,7 @@ class BiasDatabase:
             notify_users("Cohort definition inserted successfully.")  # pragma: no cover
         else:
             progress_obj.write("Cohort definition inserted successfully.")
-        self.conn.execute("SELECT id from cohort_definition ORDER BY id DESC LIMIT 1")
+        self.conn.execute(f"SELECT id from {self.schema}.cohort_definition ORDER BY id DESC LIMIT 1")
         created_cohort_id = self.conn.fetchone()[0]
         return created_cohort_id
 
@@ -105,14 +108,14 @@ class BiasDatabase:
     def create_cohort_in_bulk(self, cohort_df: pd.DataFrame):
         # make duckdb to treat cohort_df dataframe as a virtual table named "cohort_df"
         self.conn.register("cohort_df", cohort_df)
-        self.conn.execute('''
-            INSERT INTO cohort (subject_id, cohort_definition_id, cohort_start_date, cohort_end_date)
+        self.conn.execute(f'''
+            INSERT INTO {self.schema}.cohort (subject_id, cohort_definition_id, cohort_start_date, cohort_end_date)
             SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM cohort_df
         ''')
 
     def get_cohort_definition(self, cohort_definition_id):
         results = self.conn.execute(f'''
-        SELECT id, name, description, created_date, creation_info, created_by FROM cohort_definition 
+        SELECT id, name, description, created_date, creation_info, created_by FROM {self.schema}.cohort_definition 
         WHERE id = {cohort_definition_id} 
         ''')
         headers = [desc[0] for desc in results.description]
@@ -124,7 +127,7 @@ class BiasDatabase:
 
     def get_cohort(self, cohort_definition_id):
         results = self.conn.execute(f'''
-        SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM cohort 
+        SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM {self.schema}.cohort 
         WHERE cohort_definition_id = {cohort_definition_id}
         ''')
         headers = [desc[0] for desc in results.description]
@@ -135,7 +138,7 @@ class BiasDatabase:
         if self.omop_cdm_db_url is not None and not self.omop_cdm_db_url.endswith('duckdb'):
             # need to create person table from OMOP CDM postgreSQL database
             self.conn.execute(f"""
-                CREATE TABLE IF NOT EXISTS {table_name} AS 
+                CREATE TABLE IF NOT EXISTS {self.schema}.{table_name} AS 
                 SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', {table_name})
             """)
             return True # success
@@ -182,7 +185,7 @@ class BiasDatabase:
                             cohort_end_date,
                             cohort_end_date - cohort_start_date AS duration_days
                         FROM
-                            cohort
+                            {self.schema}.cohort
                         WHERE cohort_definition_id = {cohort_definition_id}    
                     )
                     SELECT
@@ -240,7 +243,7 @@ class BiasDatabase:
                     and self._create_omop_table(concept_type)):
                 # validate input vocab if it is not None
                 if vocab is not None:
-                    valid_vocabs = self._execute_query("SELECT distinct vocabulary_id FROM concept")
+                    valid_vocabs = self._execute_query(f"SELECT distinct vocabulary_id FROM {self.schema}.concept")
                     valid_vocab_ids = [row['vocabulary_id'] for row in valid_vocabs]
                     if vocab not in valid_vocab_ids:
                         notify_users(f"input {vocab} is not a valid vocabulary in OMOP. "
