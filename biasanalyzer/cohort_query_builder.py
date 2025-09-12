@@ -71,15 +71,13 @@ class CohortQueryBuilder:
             temporal_events=temporal_events
         )
 
-    def build_concept_prevalence_query(self, concept_type: str, cid: int, filter_count: int, vocab: str,
-                                       include_hierarchy: bool) -> str:
+    def build_concept_prevalence_query(self, concept_type: str, cid: int, filter_count: int, vocab: str) -> str:
         """
         Build a SQL query for concept prevalence statistics for a given domain and cohort.
         :param concept_type: Domain from DOMAIN_MAPPING (e.g., 'condition_occurrence').
         :param cid: Cohort definition ID.
         :param filter_count: Minimum count threshold for concepts with 0 meaning no filtering
         :param vocab: Vocabulary ID. Defaults to domain-specific vocabulary as defined in DOMAIN_MAPPING if set to None
-        :param include_hierarchy: Include concept hierarchy in results or not
         :return: The rendered SQL query
         :raises ValueError if concept_type is not invalid
         """
@@ -100,8 +98,7 @@ class CohortQueryBuilder:
             start_date_column=DOMAIN_MAPPING[concept_type]["start_date"],
             cid=cid,
             filter_count=filter_count,
-            vocab=effective_vocab,
-            include_hierarchy=include_hierarchy
+            vocab=effective_vocab
         )
 
     @staticmethod
