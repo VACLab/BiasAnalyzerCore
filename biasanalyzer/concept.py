@@ -1,6 +1,5 @@
-from collections import defaultdict
 import networkx as nx
-from typing import List, Optional
+from typing import List, Optional, Union
 from _collections import deque
 
 
@@ -17,9 +16,9 @@ class ConceptNode:
     def code(self) -> str:
         return self._ch.graph.nodes[self.id]["concept_code"]
 
-    def get_metrics(self, cohort_id: int) -> dict:
+    def get_metrics(self, identifier: Union[int, str]) -> dict:
         metrics = self._ch.graph.nodes[self.id].get("metrics", {})
-        return metrics.get(cohort_id, {})
+        return metrics.get(str(identifier), {})
 
     def get_union_metrics(self) -> dict:
         # simple aggregation example
@@ -59,9 +58,20 @@ class ConceptNode:
 class ConceptHierarchy:
     _graph_cache = {}
 
-    def __init__(self, input_g: nx.DiGraph, cohort_id: int):
+    def __init__(self, input_g: nx.DiGraph, identifier: str):
         self.graph = input_g
-        self.cohort_id = cohort_id
+        self.identifier = ConceptHierarchy._normalize_identifier(identifier)
+
+    @staticmethod
+    def _normalize_identifier(identifier: str) -> str:
+        # Split on "+" to allow union identifiers
+        if "+" not in identifier:
+            return identifier.strip()
+        else:
+            parts = identifier.split("+")
+            parts = [p.strip() for p in parts if p and p.strip() != ""]
+            parts = sorted(set(parts))  # deduplicate + sort
+            return "+".join(parts)
 
     @classmethod
     def build_concept_hierarchy_from_results(cls, cohort_id: int, results: List[dict]):
@@ -72,11 +82,12 @@ class ConceptHierarchy:
         :param cohort_id: cohort id to get concept hierarchy for
         :return: ConceptHierarchy object
         """
-        if cohort_id in cls._graph_cache:
-            return cls._graph_cache[cohort_id]
+        identifer = str(cohort_id)
+        if identifer in cls._graph_cache:
+            return cls._graph_cache[identifer]
 
         # node metrics
-        metrics_by_concept = defaultdict(lambda: {"count": 0, "prevalence": 0.0})
+        metrics_by_concept = {}
         node_metadata = {}
 
         for row in results:
@@ -94,7 +105,7 @@ class ConceptHierarchy:
         graph = nx.DiGraph()
         # add nodes with metadata + metrics
         for cid, meta in node_metadata.items():
-            graph.add_node(cid, **meta, metrics={cohort_id: metrics_by_concept[cid]})
+            graph.add_node(cid, **meta, metrics={identifer: metrics_by_concept[cid]})
 
         # add parent-child edges
         for row in results:
@@ -103,8 +114,8 @@ class ConceptHierarchy:
             if anc and desc and anc != desc:
                 graph.add_edge(anc, desc)
 
-        hierarchy = ConceptHierarchy(graph, cohort_id)
-        cls._graph_cache[cohort_id] = hierarchy
+        hierarchy = ConceptHierarchy(graph, identifer)
+        cls._graph_cache[identifer] = hierarchy
         return hierarchy
 
     @classmethod
@@ -127,23 +138,20 @@ class ConceptHierarchy:
         leaves = [n for n in self.graph.nodes if self.graph.out_degree(n) == 0]
         leave_nodes = [ConceptNode(l, self) for l in leaves]
         if serialization:
-            return [rl.to_dict(include_children=False) for rl in leave_nodes]
+            return [ln.to_dict(include_children=False) for ln in leave_nodes]
         else:
             return leave_nodes
 
-    def iter_nodes(self, root_id: int, order: str = "bfs", include_root: bool = True,
+    def iter_nodes(self, root_id: int, order: str = "bfs",
                    serialization: bool = False):
         """Iterate nodes in BFS or DFS order from a given root."""
-        if root_id not in self.graph:
+        if root_id not in self.graph.nodes:
             raise ValueError(f"Root node {root_id} not found in graph.")
 
         if order == "bfs":
             queue = deque([root_id])
             while queue:
                 node = queue.popleft()
-                if not include_root and node == root_id:
-                    queue.extend(self.graph.successors(node))
-                    continue
                 if serialization:
                     yield ConceptNode(node, self).to_dict(include_children=False)
                 else:
@@ -153,9 +161,6 @@ class ConceptHierarchy:
             stack = [root_id]
             while stack:
                 node = stack.pop()
-                if not include_root and node == root_id:
-                    stack.extend(self.graph.successors(node))
-                    continue
                 if serialization:
                     yield ConceptNode(node, self).to_dict(include_children=False)
                 else:
@@ -165,15 +170,23 @@ class ConceptHierarchy:
             raise ValueError("order must be 'bfs' or 'dfs'")
 
     def union(self, other: "ConceptHierarchy") -> "ConceptHierarchy":
+        new_ident = ConceptHierarchy._normalize_identifier(
+            f"{self.identifier}+{other.identifier}"
+        )
+        if new_ident in ConceptHierarchy._graph_cache:
+            return ConceptHierarchy._graph_cache[new_ident]
+
         """Merge two hierarchies into a new one, aggregating metrics."""
         composed_graph = nx.compose(self.graph, other.graph)
         # merge node metrics
         for n in composed_graph.nodes:
             metrics_self = self.graph.nodes.get(n, {}).get("metrics", {})
             metrics_other = other.graph.nodes.get(n, {}).get("metrics", {})
-            merged = {**metrics_self, **metrics_other}
-            composed_graph.nodes[n]["metrics"] = merged
-        return ConceptHierarchy(composed_graph)
+            composed_graph.nodes[n]["metrics"] = {**metrics_self, **metrics_other}
+
+        new_hierarchy = ConceptHierarchy(composed_graph, new_ident)
+        ConceptHierarchy._graph_cache[new_ident] = new_hierarchy
+        return new_hierarchy
 
     def to_dict(self, root_id: Optional[int] = None) -> dict:
         """

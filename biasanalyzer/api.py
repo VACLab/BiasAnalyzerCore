@@ -172,6 +172,9 @@ class BIAS:
         the domain instead as defined in DOMAIN_MAPPING variable in models.py
         :return: ConceptHierarchy object
         """
+        if not cohorts:
+            notify_users('The input cohorts list is empty. At least one cohort id must be provided.')
+            return None
         c_action = self._set_cohort_action()
         if c_action:
             return c_action.get_cohorts_concept_stats(cohorts, concept_type=concept_type, filter_count=filter_count,

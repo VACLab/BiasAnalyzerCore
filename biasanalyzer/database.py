@@ -242,10 +242,10 @@ class BiasDatabase:
                     valid_vocabs = self._execute_query("SELECT distinct vocabulary_id FROM concept")
                     valid_vocab_ids = [row['vocabulary_id'] for row in valid_vocabs]
                     if vocab not in valid_vocab_ids:
-                        notify_users(f"input {vocab} is not a valid vocabulary in OMOP. "
-                                     f"Supported vocabulary ids are: {valid_vocab_ids}",
-                                     level='error')
-                        return concept_stats
+                        err_msg = (f"input {vocab} is not a valid vocabulary in OMOP. "
+                                   f"Supported vocabulary ids are: {valid_vocab_ids}")
+                        notify_users(err_msg, level='error')
+                        raise ValueError(err_msg)
 
                 query = qry_builder.build_concept_prevalence_query(concept_type, cohort_definition_id,
                                                                    filter_count, vocab)
@@ -265,11 +265,11 @@ class BiasDatabase:
                     print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
                 return concept_stats
             else:
-                notify_users("Cannot connect to the OMOP database to query concept table")
-                return concept_stats
+                err_msg = "Cannot connect to the OMOP database to query concept table"
+                raise ValueError(err_msg)
         except Exception as e:
-            notify_users(f"Error computing cohort concept stats: {e}", level='error')
-            return concept_stats
+            err_msg = f"Error computing cohort concept stats: {e}"
+            raise ValueError(err_msg)
 
     def close(self):
         if self.conn:

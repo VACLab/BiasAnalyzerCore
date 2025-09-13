@@ -1,4 +1,5 @@
 from sqlalchemy.exc import SQLAlchemyError
+from functools import reduce
 import duckdb
 import pandas as pd
 from datetime import datetime
@@ -62,7 +63,8 @@ class CohortData:
                                                              concept_type=concept_type,
                                                              filter_count=filter_count,
                                                              vocab=vocab)
-        return ConceptHierarchy.build_concept_hierarchy_from_results(self.cohort_id, cohort_stats[concept_type])
+        return (cohort_stats,
+                ConceptHierarchy.build_concept_hierarchy_from_results(self.cohort_id, cohort_stats[concept_type]))
 
 
     def __del__(self):
@@ -153,14 +155,13 @@ class CohortAction:
                           concept_type: str = 'condition_occurrence',
                           filter_count: int = 0,
                           vocab=None):
-        hierarchies = [self.bias_db.get_cohort_concept_stats(c, self._query_builder,
-                                                             concept_type=concept_type,
-                                                             filter_count=filter_count,
-                                                             vocab=vocab) for c in cohorts]
-        union_h = hierarchies[0]
-        for h in hierarchies[1:]:
-            union_h = union_h.union(h)
-        return union_h
+        cohort_concept_stats = [self.bias_db.get_cohort_concept_stats(c, self._query_builder,
+                                                                      concept_type=concept_type,
+                                                                      filter_count=filter_count,
+                                                                      vocab=vocab) for c in cohorts]
+        hierarchies = [ConceptHierarchy.build_concept_hierarchy_from_results(c, c_stats.get(concept_type, []))
+                       for c, c_stats in zip(cohorts, cohort_concept_stats)]
+        return reduce(lambda h1, h2: h1.union(h2), hierarchies).to_dict()
 
     def compare_cohorts(self, cohort_id_1: int, cohort_id_2: int):
         """
