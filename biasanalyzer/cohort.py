@@ -10,7 +10,7 @@ from biasanalyzer.config import load_cohort_creation_config
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
 from biasanalyzer.utils import hellinger_distance, clean_string, notify_users
 from biasanalyzer.cohort_query_builder import CohortQueryBuilder
-from biasanalyzer.concept import build_concept_hierarchy_from_results
+from biasanalyzer.concept import ConceptHierarchy
 
 
 class CohortData:
@@ -62,7 +62,7 @@ class CohortData:
                                                              concept_type=concept_type,
                                                              filter_count=filter_count,
                                                              vocab=vocab)
-        return build_concept_hierarchy_from_results(cohort_stats[concept_type], self.cohort_id)
+        return ConceptHierarchy.build_concept_hierarchy_from_results(self.cohort_id, cohort_stats[concept_type])
 
 
     def __del__(self):
