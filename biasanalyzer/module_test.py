@@ -49,7 +49,8 @@ def condition_cohort_test(bias_obj):
         print(f'the cohort ethnicity stats: {cohort_data.get_stats("ethnicity")}')
         print(f'the cohort age distributions: {cohort_data.get_distributions("age")}')
         t1 = time.time()
-        cohort_concept_hierarchy = cohort_data.get_concept_stats(concept_type='condition_occurrence', filter_count=5000)
+        _, cohort_concept_hierarchy = cohort_data.get_concept_stats(concept_type='condition_occurrence',
+                                                                    filter_count=5000)
         concept_node = cohort_concept_hierarchy.get_node(concept_id=37311061)
         print(f'concept_node 37311061 metric: {concept_node.get_metrics(md["id"])}')
 
@@ -67,7 +68,8 @@ def condition_cohort_test(bias_obj):
         pprint.pprint(hier_dict, indent=2)
 
 
-        cohort_de_concept_hierarchy = cohort_data.get_concept_stats(concept_type='drug_exposure', filter_count=500)
+        _, cohort_de_concept_hierarchy = cohort_data.get_concept_stats(concept_type='drug_exposure',
+                                                                       filter_count=500)
         de_hier_dict = cohort_de_concept_hierarchy.to_dict()
         pprint.pprint(de_hier_dict, indent=2)
         compare_stats = bias_obj.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
