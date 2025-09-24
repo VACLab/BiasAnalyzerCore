@@ -228,7 +228,8 @@ class BiasDatabase:
             return None
 
     def get_cohort_concept_stats(self, cohort_definition_id: int, qry_builder,
-                                 concept_type='condition_occurrence', filter_count=0, vocab=None):
+                                 concept_type='condition_occurrence', filter_count=0, vocab=None,
+                                 print_concept_hierarchy=False):
         """
         Get concept statistics for a cohort from the cohort table.
         """
@@ -255,14 +256,16 @@ class BiasDatabase:
                 cs_df["details"] = cs_df.apply(
                     lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
                                 f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})", axis=1)
-                filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
-                roots = find_roots(filtered_cs_df)
-                hierarchy = build_concept_hierarchy(filtered_cs_df)
-                notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
-                for root in roots:
-                    root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
-                              & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
-                    print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
+
+                if print_concept_hierarchy:
+                    filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
+                    roots = find_roots(filtered_cs_df)
+                    hierarchy = build_concept_hierarchy(filtered_cs_df)
+                    notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
+                    for root in roots:
+                        root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
+                                  & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
+                        print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
                 return concept_stats
             else:
                 err_msg = "Cannot connect to the OMOP database to query concept table"

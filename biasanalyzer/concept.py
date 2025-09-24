@@ -16,9 +16,17 @@ class ConceptNode:
     def code(self) -> str:
         return self._ch.graph.nodes[self.id]["concept_code"]
 
-    def get_metrics(self, identifier: Union[int, str]) -> dict:
+    @property
+    def parents(self) -> List["ConceptNode"]:
+        return [ConceptNode(p, self._ch) for p in self._ch.graph.predecessors(self.id)]
+
+    @property
+    def children(self) -> List["ConceptNode"]:
+        return [ConceptNode(c, self._ch) for c in self._ch.graph.successors(self.id)]
+
+    def get_metrics(self, cohort_id: Union[int, str]) -> dict:
         metrics = self._ch.graph.nodes[self.id].get("metrics", {})
-        return metrics.get(str(identifier), {})
+        return metrics.get(str(cohort_id), {})
 
     def get_union_metrics(self) -> dict:
         # simple aggregation example
@@ -29,12 +37,6 @@ class ConceptNode:
             "count": sum(counts),
             "prevalence": sum(prevalences) / len(prevalences) if prevalences else 0.0,
         }
-
-    def parents(self) -> List["ConceptNode"]:
-        return [ConceptNode(p, self._ch) for p in self._ch.graph.predecessors(self.id)]
-
-    def children(self) -> List["ConceptNode"]:
-        return [ConceptNode(c, self._ch) for c in self._ch.graph.successors(self.id)]
 
     def to_dict(self, include_children: bool = True) -> dict:
         """
@@ -51,7 +53,7 @@ class ConceptNode:
             "parent_ids": list(self._ch.graph.predecessors(self.id)),
         }
         if include_children:
-            data["children"] = [c.to_dict(include_children=True) for c in self.children()]
+            data["children"] = [c.to_dict(include_children=True) for c in self.children]
         return data
 
 

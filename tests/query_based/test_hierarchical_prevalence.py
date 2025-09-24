@@ -32,7 +32,7 @@ def test_cohort_concept_hierarchical_prevalence(test_db, caplog):
     with pytest.raises(ValueError):
         cohort.get_concept_stats(concept_type='procedure_occurrence')
 
-    concept_stats, _ = cohort.get_concept_stats(vocab='ICD10CM')
+    concept_stats, _ = cohort.get_concept_stats(vocab='ICD10CM', print_concept_hierarchy=True)
     assert concept_stats is not None, "Failed to fetch concept stats"
     assert len(concept_stats) > 0, "No concept stats returned"
     # check returned data
@@ -112,7 +112,7 @@ def test_traversal_and_serialization():
     assert len(roots) == 1
     assert roots[0].name == "Root"
     assert roots[0].get_metrics(1) == {"count": 5, "prevalence": 0.5}
-    children = roots[0].children()
+    children = roots[0].children
     ch_names = [ch.name for ch in children]
     assert ch_names == ["Child"]
     # leaves
@@ -138,7 +138,7 @@ def test_traversal_and_serialization():
     leaves = h.get_leaf_nodes()
     assert len(leaves) == 1
     assert leaves[0].name == "Child"
-    parents = leaves[0].parents()
+    parents = leaves[0].parents
     par_names = [par.name for par in parents]
     assert par_names == ["Root"]
 

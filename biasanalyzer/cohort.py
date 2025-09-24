@@ -54,7 +54,7 @@ class CohortData:
         return self.bias_db.get_cohort_distributions(self.cohort_id, variable)
 
     def get_concept_stats(self, concept_type='condition_occurrence', filter_count=0,
-                          vocab=None):
+                          vocab=None, print_concept_hierarchy=False):
         """
         Get cohort concept statistics such as concept prevalence
         """
@@ -62,7 +62,8 @@ class CohortData:
                                                              self.query_builder,
                                                              concept_type=concept_type,
                                                              filter_count=filter_count,
-                                                             vocab=vocab)
+                                                             vocab=vocab,
+                                                             print_concept_hierarchy=print_concept_hierarchy)
         return (cohort_stats,
                 ConceptHierarchy.build_concept_hierarchy_from_results(self.cohort_id, cohort_stats[concept_type]))
 
@@ -158,7 +159,8 @@ class CohortAction:
         cohort_concept_stats = [self.bias_db.get_cohort_concept_stats(c, self._query_builder,
                                                                       concept_type=concept_type,
                                                                       filter_count=filter_count,
-                                                                      vocab=vocab) for c in cohorts]
+                                                                      vocab=vocab)
+                                for c in cohorts]
         hierarchies = [ConceptHierarchy.build_concept_hierarchy_from_results(c, c_stats.get(concept_type, []))
                        for c, c_stats in zip(cohorts, cohort_concept_stats)]
         return reduce(lambda h1, h2: h1.union(h2), hierarchies).to_dict()
