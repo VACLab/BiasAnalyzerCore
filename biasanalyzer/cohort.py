@@ -1,14 +1,17 @@
 from sqlalchemy.exc import SQLAlchemyError
+from functools import reduce
 import duckdb
 import pandas as pd
 from datetime import datetime
 from tqdm.auto import tqdm
 from pydantic import ValidationError
+from typing import List
 from biasanalyzer.models import CohortDefinition
 from biasanalyzer.config import load_cohort_creation_config
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
 from biasanalyzer.utils import hellinger_distance, clean_string, notify_users
 from biasanalyzer.cohort_query_builder import CohortQueryBuilder
+from biasanalyzer.concept import ConceptHierarchy
 
 
 class CohortData:
@@ -51,7 +54,7 @@ class CohortData:
         return self.bias_db.get_cohort_distributions(self.cohort_id, variable)
 
     def get_concept_stats(self, concept_type='condition_occurrence', filter_count=0,
-                          vocab=None, include_hierarchy=False):
+                          vocab=None, print_concept_hierarchy=False):
         """
         Get cohort concept statistics such as concept prevalence
         """
@@ -60,8 +63,9 @@ class CohortData:
                                                              concept_type=concept_type,
                                                              filter_count=filter_count,
                                                              vocab=vocab,
-                                                             include_hierarchy=include_hierarchy)
-        return cohort_stats
+                                                             print_concept_hierarchy=print_concept_hierarchy)
+        return (cohort_stats,
+                ConceptHierarchy.build_concept_hierarchy_from_results(self.cohort_id, cohort_stats[concept_type]))
 
 
     def __del__(self):
@@ -147,6 +151,19 @@ class CohortAction:
             if omop_session is not None:
                 omop_session.close()
             return None
+
+    def get_cohorts_concept_stats(self, cohorts: List[int],
+                          concept_type: str = 'condition_occurrence',
+                          filter_count: int = 0,
+                          vocab=None):
+        cohort_concept_stats = [self.bias_db.get_cohort_concept_stats(c, self._query_builder,
+                                                                      concept_type=concept_type,
+                                                                      filter_count=filter_count,
+                                                                      vocab=vocab)
+                                for c in cohorts]
+        hierarchies = [ConceptHierarchy.build_concept_hierarchy_from_results(c, c_stats.get(concept_type, []))
+                       for c, c_stats in zip(cohorts, cohort_concept_stats)]
+        return reduce(lambda h1, h2: h1.union(h2), hierarchies).to_dict()
 
     def compare_cohorts(self, cohort_id_1: int, cohort_id_2: int):
         """
