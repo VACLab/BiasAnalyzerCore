@@ -94,9 +94,22 @@ concept ID. All clinical events in OMOP, such as conditions, drug exposures, pro
 represented as concepts. You can get patient counts and prevalence associated with each concept by accessing 
 the method `get_concept_stats()` with a code snippet example shown below.
   ```angular2html
-    cohort_concepts = baseline_cohort_data.get_concept_stats(concept_type='condition_occurrence')
+    cohort_concepts, cohort_concept_hierarchy = baseline_cohort_data.get_concept_stats(concept_type='condition_occurrence')
     print(pd.DataFrame(cohort_concepts["condition_occurrence"]))
+    print(f"returned cohort_concept_hierarchy object converted to dict: {cohort_concept_hierarchy.to_dict()}")
   ```
+  The returned cohort_concept_hierarchy object stores concept hierarchical relationsips with concept nodes indexed 
+to allow quick information retrival of a concept node and provides hierarchy traversal methods for concept hierarchy 
+navigation. For more details, refer to the corresponding tutorial notebook [BiasAnalyzerCohortConceptTutorial.ipynb](https://github.com/VACLab/BiasAnalyzer/blob/main/notebooks/BiasAnalyzerCohortConceptTutorial.ipynb).
+- There is also an API method `get_cohorts_concept_stats(list_of_cohort_ids, concept_type='condition_occurrence', filter_count=0, vocab=None)` 
+that enables users to explore union of concept prevalences over multiple cohorts to facilitate potential cohort 
+selection bias exploration. An example code snippet is shown below to illustrate how to use this method.
+   ```angular2html
+   cohort_list = [baseline_cohort_data.cohort_id, study_cohort_data.cohort_id]
+   aggregated_cohort_metrics_dict = bias.get_cohorts_concept_stats(cohort_list)
+   print('Aggregated concept prevalence metrics over the baseline and study cohorts are:')
+   print(aggregated_cohort_metrics_dict)
+   ```
 - There is also an API method that enables users to compare distributions of two cohorts by calling `bias.compare_cohorts(cohort1_id, cohort2_id)` 
 where cohort1_id and cohort2_id are integers and can be obtained from metadata of a cohort object. Currently, 
 only hellinger distances between distributions of two cohorts are computed.

@@ -19,7 +19,7 @@ class CohortQueryBuilder:
         except ModuleNotFoundError: # pragma: no cover
             template_path = os.path.join(os.path.dirname(__file__), "sql_templates")
 
-        print(f'template_path: {template_path}, cohort_creation: {cohort_creation}')
+        print(f'template_path: {template_path}')
         self.env = Environment(loader=FileSystemLoader(template_path), extensions=['jinja2.ext.do'])
         if cohort_creation:
             self.env.globals.update(
