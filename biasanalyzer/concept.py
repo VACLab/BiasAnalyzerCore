@@ -24,6 +24,11 @@ class ConceptNode:
     def children(self) -> List["ConceptNode"]:
         return [ConceptNode(c, self._ch) for c in self._ch.graph.successors(self.id)]
 
+    def source_cohorts(self) -> List[int]:
+        """Return sorted list of cohort identifier strings the node appears in."""
+        metrics = self._ch.graph.nodes[self.id].get("metrics", {})
+        return sorted(int(k) for k in metrics.keys())
+
     def get_metrics(self, cohort_id: Union[int, str]) -> dict:
         metrics = self._ch.graph.nodes[self.id].get("metrics", {})
         return metrics.get(str(cohort_id), {})
@@ -38,22 +43,27 @@ class ConceptNode:
             "prevalence": sum(prevalences) / len(prevalences) if prevalences else 0.0,
         }
 
-    def to_dict(self, include_children: bool = True) -> dict:
+    def to_dict(self, include_children: bool = True, include_union_metrics: bool = False) -> dict:
         """
         Serialize this node into a dict. Optionally include nested children.
+        Set include_union_metrics to True to compute an aggregated union metric
         """
+        node_metrics = self._ch.graph.nodes[self.id].get("metrics", {}).copy()
+        if include_union_metrics:
+            node_metrics = {"union": self.get_union_metrics(), **node_metrics}
+
         data = {
             "concept_id": self.id,
             "concept_name": self.name,
             "concept_code": self.code,
-            "metrics": {
-                "union": self.get_union_metrics(),
-                "cohorts": self._ch.graph.nodes[self.id].get("metrics", {}),
-            },
+            "metrics": node_metrics,
+            "source_cohorts": self.source_cohorts(),
             "parent_ids": list(self._ch.graph.predecessors(self.id)),
         }
         if include_children:
-            data["children"] = [c.to_dict(include_children=True) for c in self.children]
+            data["children"] = [c.to_dict(include_children=True, include_union_metrics=include_union_metrics)
+                                for c in self.children]
+
         return data
 
 
@@ -190,16 +200,20 @@ class ConceptHierarchy:
         ConceptHierarchy._graph_cache[new_ident] = new_hierarchy
         return new_hierarchy
 
-    def to_dict(self, root_id: Optional[int] = None) -> dict:
+    def to_dict(self, root_id: Optional[int] = None, include_union_metrics: bool = False) -> dict:
         """
         Convert the concept hierarchy or a sub-hierarchy to a nested dict structure
         :param root_id: if provided, return the sub-hierarchy rooted at this concept_id;
         if None, return the whole hierarchy with all roots.
-        :return: nested dict representation of the hierarchy or sub-hierarchy
+        :return: nested dict representation of the hierarchy or sub-hierarchy.
+        By default, include per-cohort metrics only. Set include_union_metrics=True to compute and include
+        union aggregates
         """
         if root_id is not None:
             if root_id not in self.graph:
                 raise ValueError(f"Input concept id {root_id} not found in the concept hierarchy graph")
-            return {"hierarchy": [ConceptNode(root_id, self).to_dict()]}
+            return {"hierarchy": [ConceptNode(root_id, self).to_dict(include_children=True,
+                                                                     include_union_metrics=include_union_metrics)]}
 
-        return {"hierarchy": [r.to_dict() for r in self.get_root_nodes()]}
+        return {"hierarchy": [r.to_dict(include_children=True, include_union_metrics=include_union_metrics)
+                              for r in self.get_root_nodes()]}
