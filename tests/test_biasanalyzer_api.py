@@ -159,22 +159,21 @@ def test_cohorts_union_concept_stats(test_db):
     # This explains why union_result values differ from the raw stats above.
     assert union_result == {'hierarchy': [
         {'concept_id': 316139, 'concept_name': 'Heart failure', 'concept_code': '84114007',
-         'metrics': {'union': {'count': 4, 'prevalence': 0.45},
-                     'cohorts': {'1': {'count': 2, 'prevalence': 0.4},
-                                 '2': {'count': 2, 'prevalence': 0.5}}},
+         'metrics': {'1': {'count': 2, 'prevalence': 0.4},
+                     '2': {'count': 2, 'prevalence': 0.5}},
+         'source_cohorts': [1, 2],
          'parent_ids': [], 'children': []},
         {'concept_id': 4041664, 'concept_name': 'Difficulty breathing', 'concept_code': '230145002',
         'metrics': {
-            'union': {'count': 5, 'prevalence': 0.525},
-            'cohorts': {'1': {'count': 4, 'prevalence': 0.8},
-                        '2': {'count': 1, 'prevalence': 0.25}
-                        }
+            '1': {'count': 4, 'prevalence': 0.8},
+            '2': {'count': 1, 'prevalence': 0.25}
         },
+        'source_cohorts': [1, 2],
         'parent_ids': [], 'children': []},
         {'concept_id': 37311061, 'concept_name': 'COVID-19', 'concept_code': '840539006',
-         'metrics': {'union': {'count': 8, 'prevalence': 0.9},
-                     'cohorts': {'1': {'count': 4, 'prevalence': 0.8},
-                                 '2': {'count': 4, 'prevalence': 1.0}}},
+         'metrics': {'1': {'count': 4, 'prevalence': 0.8},
+                     '2': {'count': 4, 'prevalence': 1.0}},
+         'source_cohorts': [1, 2],
          'parent_ids': [], 'children': []},
     ]}
 

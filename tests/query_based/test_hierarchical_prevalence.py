@@ -116,25 +116,22 @@ def test_traversal_and_serialization():
     ch_names = [ch.name for ch in children]
     assert ch_names == ["Child"]
     # leaves
-    assert h.get_leaf_nodes(serialization=True) == [
+    leaf_nodes = h.get_leaf_nodes(serialization=True)
+    assert leaf_nodes == [
         {
             'concept_id': 2,
             'concept_name': 'Child',
             'concept_code': 'C',
             'metrics': {
-                'union': {
-                    'count': 2,
-                    'prevalence': 0.2
-                },
-                'cohorts': {
-                    '1': {
-                        'count': 2, 'prevalence': 0.2
-                    }
+                '1': {
+                    'count': 2, 'prevalence': 0.2
                 }
             },
+            'source_cohorts': [1],
             'parent_ids': [1]
         }
     ]
+
     leaves = h.get_leaf_nodes()
     assert len(leaves) == 1
     assert leaves[0].name == "Child"
@@ -147,17 +144,12 @@ def test_traversal_and_serialization():
         "concept_name": "Root",
         "concept_code": "R",
         "metrics": {
-            "union": {
+            "1": {
                 "count": 5,
                 "prevalence": 0.5
-            },
-            "cohorts": {
-                "1": {
-                    "count": 5,
-                    "prevalence": 0.5
-                }
             }
         },
+        'source_cohorts': [1],
         "parent_ids": []
     }
 
@@ -194,26 +186,28 @@ def test_traversal_and_serialization():
     with pytest.raises(ValueError):
         h.to_dict(111)
 
-    h_dict = h.to_dict(1)
+    h_dict = h.to_dict(1, include_union_metrics=True)
     assert h_dict == {'hierarchy': [{
         'concept_id': 1, 'concept_name': 'Root', 'concept_code': 'R',
         'metrics': {'union': {'count': 5, 'prevalence': 0.5},
-                    'cohorts': {'1': {'count': 5, 'prevalence': 0.5}}},
+                    '1': {'count': 5, 'prevalence': 0.5}},
+        'source_cohorts': [1],
         'parent_ids': [],
         'children': [{'concept_id': 2, 'concept_name': 'Child', 'concept_code': 'C',
                       'metrics': {'union': {'count': 2, 'prevalence': 0.2},
-                                  'cohorts': {'1': {'count': 2, 'prevalence': 0.2}}},
+                                  '1': {'count': 2, 'prevalence': 0.2}},
+                      'source_cohorts': [1],
                       'parent_ids': [1], 'children': []}]}
     ]}
 
     h_dict = h.to_dict()
     assert h_dict == {'hierarchy': [{
         'concept_id': 1, 'concept_name': 'Root', 'concept_code': 'R',
-        'metrics': {'union': {'count': 5, 'prevalence': 0.5},
-                    'cohorts': {'1': {'count': 5, 'prevalence': 0.5}}},
+        'metrics': {'1': {'count': 5, 'prevalence': 0.5}},
+        'source_cohorts': [1],
         'parent_ids': [],
         'children': [{'concept_id': 2, 'concept_name': 'Child', 'concept_code': 'C',
-                      'metrics': {'union': {'count': 2, 'prevalence': 0.2},
-                                  'cohorts': {'1': {'count': 2, 'prevalence': 0.2}}},
+                      'metrics': {'1': {'count': 2, 'prevalence': 0.2}},
+                      'source_cohorts': [1],
                       'parent_ids': [1], 'children': []}]}
     ]}
