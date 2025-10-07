@@ -510,14 +510,18 @@ def test_cohort_creation_mixed_domains(test_db):
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
     patient_ids = set([item['subject_id'] for item in cohort.data])
     print(f'patient_ids: {patient_ids}', flush=True)
-    assert_equal(len(patient_ids), 2)
-    assert_equal(patient_ids, {1, 2})
+    assert_equal(len(patient_ids), 3)
+    assert_equal(patient_ids, {1, 2, 6})
     start_dates = [item['cohort_start_date'] for item in cohort.data]
-    assert_equal(len(start_dates), 2)
-    assert_equal(start_dates, [datetime.date(2020, 6, 1), datetime.date(2020, 6, 1)])
+    assert_equal(len(start_dates), 3)
+    assert_equal(start_dates, [datetime.date(2020, 6, 1),
+                               datetime.date(2020, 6, 1),
+                               datetime.date(2018, 1, 1)])
     end_dates = [item['cohort_end_date'] for item in cohort.data]
-    assert_equal(len(end_dates), 2)
-    assert_equal(end_dates, [datetime.date(2020, 6, 20), datetime.date(2020, 6, 20)])
+    assert_equal(len(end_dates), 3)
+    assert_equal(end_dates, [datetime.date(2020, 6, 20),
+                             datetime.date(2020, 6, 20),
+                             datetime.date(2018, 1, 20)])
 
 
 def test_cohort_comparison(test_db):
@@ -616,8 +620,8 @@ def test_cohort_creation_negative_instance(test_db):
     assert cohort.data is not None, "Cohort creation returned None data"
 
     patient_ids = set([item['subject_id'] for item in cohort.data])
-    assert_equal(len(patient_ids), 4)  # Female patients 1, 2, 3, 5
-    assert_equal(patient_ids, {1, 2, 3, 5})
+    assert_equal(len(patient_ids), 6)  # Female patients 1, 2, 3, 5
+    assert_equal(patient_ids, {1, 2, 3, 5, 6, 7})
 
     # Verify dates for a specific patient (e.g., patient 1 with last diabetes diagnosis)
     patient_1 = next(item for item in cohort.data if item['subject_id'] == 1)
@@ -647,8 +651,8 @@ def test_cohort_creation_offset(test_db):
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
 
     patient_ids = set([item['subject_id'] for item in cohort.data])
-    assert_equal(len(patient_ids), 4)  # Female patients 1, 2, 3, 5
-    assert_equal(patient_ids, {1, 2, 3, 5})
+    assert_equal(len(patient_ids), 6)  # Female patients 1, 2, 3, 5
+    assert_equal(patient_ids, {1, 2, 3, 5, 6, 7})
 
     # Verify dates for a specific patient (e.g., patient 1 with offset)
     patient_1 = next(item for item in cohort.data if item['subject_id'] == 1)
@@ -679,8 +683,8 @@ def test_cohort_creation_negative_instance_offset(test_db):
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
 
     patient_ids = set([item['subject_id'] for item in cohort.data])
-    assert_equal(len(patient_ids), 4)
-    assert_equal(patient_ids, {1, 2, 3, 5})
+    assert_equal(len(patient_ids), 6)
+    assert_equal(patient_ids, {1, 2, 3, 5, 6, 7})
 
     # Verify dates for a specific patient (e.g., patient 1 with last diabetes and offset)
     patient_1 = next(item for item in cohort.data if item['subject_id'] == 1)
