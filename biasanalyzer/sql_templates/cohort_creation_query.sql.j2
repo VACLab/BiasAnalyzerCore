@@ -1,6 +1,5 @@
 {% extends "base.sql.j2" %}
 {% block domain_events %}
--- Debug: ranked_domains = {{ ranked_domains | tojson }}
 {% if ranked_domains %}
 WITH
 {% for event_type, domain in ranked_domains.items() %}
@@ -31,9 +30,6 @@ ranked_desc_{{ event_type }} AS (
 ),
 {% endif %}
 {% endfor %}
-{% else %}
--- Debug: No ranked_domains provided
-{% endif %}
 {% endblock %}
 
 {% block inclusion_temporal_event_criteria %}
