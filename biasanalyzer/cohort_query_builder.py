@@ -116,12 +116,38 @@ class CohortQueryBuilder:
         if not domain or not domain["table"]:
             return ""
 
-        base_sql = f"SELECT person_id, event_start_date, event_end_date FROM ranked_events_{event['event_type']}"
-        conditions = [f"concept_id = {event['event_concept_id']}"]
+        # Handle event_instance, including negative values
+        rank_table = f"ranked_asc_{event['event_type']}"
         if "event_instance" in event and event["event_instance"] is not None:
-            conditions.append(f"event_instance >= {event['event_instance']}")
+            event_instance = int(event["event_instance"])
+            abs_instance = abs(event_instance)
+            if event_instance < 0:
+                rank_table = f"ranked_desc_{event['event_type']}"
+            instance_condition = f" AND event_instance = {abs_instance}"
+        else:
+            instance_condition = ""
+        # Handle offset for cohort window
+        offset = event.get("offset", 0)
+        if offset == 0:
+            adjusted_start = "event_start_date"
+            adjusted_end = "event_end_date"
+        else:
+            # Apply offset to start_date for negative, end_date for positive
+            adjusted_start = f"DATE_SUB(event_start_date, INTERVAL {abs(offset)} DAY)" if offset < 0 else "event_start_date"
+            adjusted_end = f"DATE_ADD(event_end_date, INTERVAL {offset} DAY)" if offset > 0 else "event_end_date"
 
-        return f"{base_sql} WHERE {' AND '.join(conditions)}"
+        base_sql = f"""
+                    SELECT
+                        person_id,
+                        event_start_date,
+                        event_end_date,
+                        {adjusted_start} AS adjusted_start,
+                        {adjusted_end} AS adjusted_end
+                    FROM {rank_table}
+                    WHERE concept_id = {event['event_concept_id']}{instance_condition}
+                """
+
+        return base_sql
 
 
     @staticmethod
@@ -163,7 +189,7 @@ class CohortQueryBuilder:
                     """
                 # Then, union all events for qualifying person_ids
                 combined_sql = f"""
-                    SELECT person_id, event_start_date, event_end_date
+                    SELECT person_id, event_start_date, event_end_date, adjusted_start, adjusted_end
                     FROM (
                         {' UNION ALL '.join(f'({q})' for q in queries)}
                     ) AS all_events
@@ -174,13 +200,15 @@ class CohortQueryBuilder:
                 return combined_sql
 
             elif event_group["operator"] == "OR":
-                return f"SELECT person_id, event_start_date, event_end_date FROM ({' UNION '.join(queries)}) AS {alias_prefix}_or"
+                return (f"SELECT person_id, event_start_date, event_end_date, adjusted_start, adjusted_end "
+                        f"FROM ({' UNION '.join(queries)}) AS {alias_prefix}_or")
             elif event_group["operator"] == "NOT":
                 not_query = queries[0]
                 # Return a query that selects all persons from a base table (e.g., person),
                 # excluding those in the NOT subquery, while allowing dates from other criteria
                 return f"""
-                        SELECT p.person_id, NULL AS event_start_date, NULL AS event_end_date
+                        SELECT p.person_id, NULL AS event_start_date, NULL AS event_end_date,
+                               NULL AS adjusted_start, NULL AS adjusted_end,
                         FROM person p
                         WHERE p.person_id NOT IN (
                             SELECT person_id FROM ({not_query}) AS {alias_prefix}_not
@@ -199,14 +227,14 @@ class CohortQueryBuilder:
                         if timestamp_event_index < non_timestamp_event_index:
                             # timestamp needs to happen before non-timestamp event
                             return f"""
-                                        SELECT person_id, event_start_date, event_end_date
+                                        SELECT person_id, event_start_date, event_end_date, adjusted_start, adjusted_end
                                         FROM ({queries[0]}) AS {alias_prefix}_0
                                         WHERE event_start_date > DATE '{timestamp}'
                                     """
                         else:
                             # non-timestamp event needs to happen before timestamp
                             return f"""
-                                        SELECT person_id, event_start_date, event_end_date
+                                        SELECT person_id, event_start_date, event_end_date, adjusted_start, adjusted_end
                                         FROM ({queries[0]}) AS {alias_prefix}_0
                                         WHERE event_start_date < DATE '{timestamp}'
                                     """
@@ -218,14 +246,16 @@ class CohortQueryBuilder:
 
                     # Ensure both events contribute dates with temporal order and interval
                     return f"""
-                                SELECT {e1_alias}.person_id, {e1_alias}.event_start_date, {e1_alias}.event_end_date
+                                SELECT {e1_alias}.person_id, {e1_alias}.event_start_date, {e1_alias}.event_end_date, 
+                                       {e1_alias}.adjusted_start, {e1_alias}.adjusted_end
                                     FROM ({queries[0]}) AS {e1_alias}
                                     JOIN ({queries[1]}) AS {e2_alias}
                                     ON {e1_alias}.person_id = {e2_alias}.person_id
                                     AND {e1_alias}.event_start_date < {e2_alias}.event_start_date
                                     {interval_sql}
                                     UNION ALL
-                                    SELECT {e2_alias}.person_id, {e2_alias}.event_start_date, {e2_alias}.event_end_date
+                                    SELECT {e2_alias}.person_id, {e2_alias}.event_start_date, {e2_alias}.event_end_date, 
+                                           {e2_alias}.adjusted_start, {e2_alias}.adjusted_end
                                     FROM ({queries[1]}) AS {e2_alias}
                                     JOIN ({queries[0]}) AS {e1_alias}
                                     ON {e2_alias}.person_id = {e1_alias}.person_id
@@ -277,7 +307,8 @@ class CohortQueryBuilder:
                 #       events:
                 #         - event_type: drug_exposure
                 #           event_concept_id: 67890
-                return (f"SELECT person_id, event_start_date, event_end_date FROM "
+                return (f"SELECT person_id, event_start_date, event_end_date, "
+                        f"adjusted_start, adjusted_end FROM "
                         f"({' UNION ALL '.join(filters)}) AS combined_events")
 
             # Single event group case with operator defined

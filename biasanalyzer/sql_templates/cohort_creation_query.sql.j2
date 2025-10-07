@@ -4,7 +4,7 @@
 WITH
 {% for domain_type, domain in ranked_domains.items() %}
 {% if domain.table %}
-ranked_events_{{ domain_type }} AS (
+ranked_asc_events_{{ domain_type }} AS (
     SELECT
         person_id,
         {{ domain.concept_id }} AS concept_id,
@@ -13,6 +13,18 @@ ranked_events_{{ domain_type }} AS (
         ROW_NUMBER() OVER (
             PARTITION BY person_id, {{ domain.concept_id }}
             ORDER BY {{ domain.start_date }} ASC
+        ) AS event_instance
+    FROM {{ domain.table }}
+),
+ranked_desc_{{ domain_type }} AS (
+    SELECT
+        person_id,
+        {{ domain.concept_id }} AS concept_id,
+        {{ domain.start_date }} AS event_start_date,
+        {{ domain.end_date }} AS event_end_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY person_id, {{ domain.concept_id }}
+            ORDER BY {{ domain.start_date }} DESC
         ) AS event_instance
     FROM {{ domain.table }}
 ),
