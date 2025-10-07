@@ -210,7 +210,7 @@ class BiasDatabase:
 
     def get_cohort_distributions(self, cohort_definition_id: int, variable: str):
         """
-        Get age distribution statistics for a cohort from the cohort table.
+        Get distribution statistics for a cohort from the cohort table.
         """
         try:
             if self._create_omop_table('person'):

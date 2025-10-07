@@ -133,8 +133,8 @@ class CohortQueryBuilder:
             adjusted_end = "event_end_date"
         else:
             # Apply offset to start_date for negative, end_date for positive
-            adjusted_start = f"DATE_SUB(event_start_date, INTERVAL {abs(offset)} DAY)" if offset < 0 else "event_start_date"
-            adjusted_end = f"DATE_ADD(event_end_date, INTERVAL {offset} DAY)" if offset > 0 else "event_end_date"
+            adjusted_start = f"event_start_date - INTERVAL '{abs(offset)} days'" if offset < 0 else "event_start_date"
+            adjusted_end = f"event_end_date + INTERVAL '{offset} days'" if offset > 0 else "event_end_date"
 
         base_sql = f"""
                     SELECT

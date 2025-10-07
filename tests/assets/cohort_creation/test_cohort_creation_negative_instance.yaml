@@ -1,0 +1,11 @@
+inclusion_criteria:
+  demographics:
+    gender: female
+    min_birth_year: 1970
+    max_birth_year: 2000
+  temporal_events:
+    - operator: AND
+      events:
+        - event_type: condition_occurrence
+          event_concept_id: 201826  # Type 2 diabetes (valid OMOP ID)
+          event_instance: -1      # Last occurrence
