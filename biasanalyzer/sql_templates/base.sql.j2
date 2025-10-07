@@ -6,8 +6,8 @@ domain_qualifying_events AS (
 filtered_cohort AS (
     SELECT c.person_id,
          {% if temporal_events %}
-           MIN(c.event_start_date) AS cohort_start_date,
-           MAX(c.event_end_date) AS cohort_end_date
+           MIN(c.adjusted_start) AS cohort_start_date,
+           MAX(c.adjusted_end) AS cohort_end_date
          {% else %}
            MIN(all_events.event_start_date) AS cohort_start_date,
            MAX(all_events.event_end_date) AS cohort_end_date
