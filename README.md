@@ -8,7 +8,7 @@ BiasAnalyzer is a Python package that enables users to track, quantify, analyze,
 selection. In this context, bias is viewed as lack of representation within a cohort compared to a baseline population.
 
 ⚠️ **Status: Alpha - Work in Progress**  
-This project is in an early alpha stage and under active development. It may undergo significant changes before its first 
+This Python package is in an early alpha stage and under active development. It may undergo significant changes before its first 
 official release.
 
 To import the BiasAnalyzer package and use the BIAS API, you can follow the steps outlined below. Sample commands or 
