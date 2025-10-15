@@ -123,7 +123,10 @@ def test_db():
                     (2, 8532, 0, 0, 1996),  -- Female, qualifying, not excluded due to not having cardiac surgery
                     (3, 8532, 0, 0, 1996),  -- Female, has cardiac surgery
                     (4, 8507, 0, 0, 1980),  -- Male, wrong gender
-                    (5, 8532, 0, 0, 1980);  -- Female, missing insulin
+                    (5, 8532, 0, 0, 1980),  -- Female, missing insulin
+                    -- for offset and negative instance testing
+                    (6, 8532, 0, 0, 1985),  -- Female, multiple diabetes records, last one too early
+                    (7, 8532, 0, 0, 1990);  -- Female, diabetes record too recent
             """)
 
     # Insert mock concepts as needed
@@ -141,7 +144,8 @@ def test_db():
                     (5, 'Fever', '2012-04-01', '2020-04-01', 'R50.9', 'ICD10CM', 'Condition'),
                     (37311061, 'COVID-19', '2012-04-01', '2020-04-01', '840539006', 'SNOMED', 'Condition'),
                     (4041664, 'Difficulty breathing', '2012-04-01', '2020-04-01', '230145002', 'SNOMED', 'Condition'),
-                    (316139, 'Heart failure', '2012-04-01', '2020-04-01', '84114007', 'SNOMED', 'Condition');
+                    (316139, 'Heart failure', '2012-04-01', '2020-04-01', '84114007', 'SNOMED', 'Condition'),
+                    (201826, 'Type 2 diabetes mellitus', '2012-04-01', '2020-04-01', '44054006', 'SNOMED', 'Condition');                    
             """)
 
     # Insert hierarchical relationships as needed
@@ -163,7 +167,8 @@ def test_db():
                     (1, 3, 1), -- Diabetes -> Type 2
                     (1, 4, 2), -- Diabetes -> Retinopathy
                     (2, 4, 1), -- Type 1 -> Diabetes Retinopathy
-                    (3, 4, 1); -- Type 2 -> Diabetes Retinopathy
+                    (3, 4, 1), -- Type 2 -> Diabetes Retinopathy
+                    (201826, 201826, 0); -- Type 2 diabetes SNOMED
             """)
 
     # Insert mock condition occurrences as needed
@@ -199,7 +204,11 @@ def test_db():
                     (2, 201826, '2020-06-01', '2020-06-01'),  -- Person 2: Diabetes
                     (3, 201826, '2020-06-01', '2020-06-01'),  -- Person 3: Diabetes
                     (4, 201826, '2020-06-01', '2020-06-01'),  -- Person 4: Diabetes
-                    (5, 201826, '2020-06-01', '2020-06-01');  -- Person 5: Diabetes
+                    (5, 201826, '2020-06-01', '2020-06-01'),  -- Person 5: Diabetes
+                    -- for negative event instance and offset testing
+                    (6, 201826, '2017-01-01', '2017-01-01'),  -- Person 6: Early diabetes record
+                    (6, 201826, '2018-01-01', '2018-01-01'),  -- Person 6: Last diabetes record, still early
+                    (7, 201826, '2023-01-01', '2023-01-01');  -- Person 7: Recent diabetes record
             """)
 
     # Insert mock visit data
@@ -220,7 +229,10 @@ def test_db():
                         (2, 9, 9202, '2020-06-10', '2020-06-10'),  -- Person 2: Outpatient
                         (3, 10, 9202, '2020-06-10', '2020-06-10'),  -- Person 3: Outpatient
                         (4, 11, 9202, '2020-06-10', '2020-06-10'),  -- Person 4: Outpatient
-                        (5, 12, 9202, '2020-06-10', '2020-06-10');  -- Person 5: Outpatient
+                        (5, 12, 9202, '2020-06-10', '2020-06-10'),  -- Person 5: Outpatient
+                        -- New patients (no visits needed for exclusion testing)
+                        (6, 13, 9202, '2018-01-10', '2018-01-10'),  -- Person 6: Outpatient
+                        (7, 14, 9202, '2023-01-10', '2023-01-10');  -- Person 7: Outpatient
                 """)
 
         # Insert mock procedure_occurrence data for mixed domain testing
@@ -234,7 +246,9 @@ def test_db():
                             (3, 3, 4048609, '2020-06-20'),  -- Person 3: Blood test
                             (3, 4, 619339, '2020-06-25'),  -- Person 3: Cardiac surgery (exclusion)
                             (4, 5, 4048609, '2020-06-20'),  -- Person 4: Blood test
-                            (5, 6, 4048609, '2020-06-20');  -- Person 5: Blood test
+                            (5, 6, 4048609, '2020-06-20'),  -- Person 5: Blood test
+                            (6, 7, 4048609, '2018-01-15'),  -- Person 6: Blood test
+                            (7, 8, 4048609, '2023-01-15');  -- Person 7: Blood test
                     """)
 
         # Insert mock procedure_occurrence data for mixed domain testing
@@ -246,7 +260,9 @@ def test_db():
                                 (1, 4285892, '2020-06-15', '2020-06-15'),  -- Person 1: Insulin 14 days after
                                 (2, 4285892, '2020-06-15', '2020-06-15'),  -- Person 2: Insulin
                                 (3, 4285892, '2020-06-15', '2020-06-15'),  -- Person 3: Insulin
-                                (4, 4285892, '2020-06-15', '2020-06-15');  -- Person 4: Insulin
+                                (4, 4285892, '2020-06-15', '2020-06-15'),  -- Person 4: Insulin
+                                (6, 4285892, '2018-01-20', '2018-01-20'),  -- Person 6: Insulin
+                                (7, 4285892, '2023-01-20', '2023-01-20');  -- Person 7: Insulin
                                 -- Person 5: No insulin
                         """)
 

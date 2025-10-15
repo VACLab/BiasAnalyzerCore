@@ -2,9 +2,9 @@
 {% block domain_events %}
 {% if ranked_domains %}
 WITH
-{% for domain_type, domain in ranked_domains.items() %}
+{% for event_type, domain in ranked_domains.items() %}
 {% if domain.table %}
-ranked_events_{{ domain_type }} AS (
+ranked_asc_{{ event_type }} AS (
     SELECT
         person_id,
         {{ domain.concept_id }} AS concept_id,
@@ -13,6 +13,18 @@ ranked_events_{{ domain_type }} AS (
         ROW_NUMBER() OVER (
             PARTITION BY person_id, {{ domain.concept_id }}
             ORDER BY {{ domain.start_date }} ASC
+        ) AS event_instance
+    FROM {{ domain.table }}
+),
+ranked_desc_{{ event_type }} AS (
+    SELECT
+        person_id,
+        {{ domain.concept_id }} AS concept_id,
+        {{ domain.start_date }} AS event_start_date,
+        {{ domain.end_date }} AS event_end_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY person_id, {{ domain.concept_id }}
+            ORDER BY {{ domain.start_date }} DESC
         ) AS event_instance
     FROM {{ domain.table }}
 ),
@@ -25,7 +37,7 @@ ranked_events_{{ domain_type }} AS (
 {% if inclusion_criteria.temporal_events %}
     {{ temporal_event_filter(inclusion_criteria.temporal_events) }}
 {% else %}
-    SELECT person_id
+    SELECT person_id, NULL AS event_start_date, NULL AS event_end_date, NULL AS adjusted_start, NULL AS adjusted_end
     FROM person p
 {% endif %}
 {% endblock %}

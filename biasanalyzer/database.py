@@ -213,7 +213,7 @@ class BiasDatabase:
 
     def get_cohort_distributions(self, cohort_definition_id: int, variable: str):
         """
-        Get age distribution statistics for a cohort from the cohort table.
+        Get distribution statistics for a cohort from the cohort table.
         """
         try:
             if self._create_omop_table('person'):
@@ -232,7 +232,7 @@ class BiasDatabase:
 
     def get_cohort_concept_stats(self, cohort_definition_id: int, qry_builder,
                                  concept_type='condition_occurrence', filter_count=0, vocab=None,
-                                 include_hierarchy=False):
+                                 print_concept_hierarchy=False):
         """
         Get concept statistics for a cohort from the cohort table.
         """
@@ -246,34 +246,36 @@ class BiasDatabase:
                     valid_vocabs = self._execute_query(f"SELECT distinct vocabulary_id FROM {self.schema}.concept")
                     valid_vocab_ids = [row['vocabulary_id'] for row in valid_vocabs]
                     if vocab not in valid_vocab_ids:
-                        notify_users(f"input {vocab} is not a valid vocabulary in OMOP. "
-                                     f"Supported vocabulary ids are: {valid_vocab_ids}",
-                                     level='error')
-                        return concept_stats
+                        err_msg = (f"input {vocab} is not a valid vocabulary in OMOP. "
+                                   f"Supported vocabulary ids are: {valid_vocab_ids}")
+                        notify_users(err_msg, level='error')
+                        raise ValueError(err_msg)
 
                 query = qry_builder.build_concept_prevalence_query(concept_type, cohort_definition_id,
-                                                                   filter_count, vocab, include_hierarchy)
+                                                                   filter_count, vocab)
                 concept_stats[concept_type] = self._execute_query(query)
                 cs_df = pd.DataFrame(concept_stats[concept_type])
                 # Combine concept_name and prevalence into a "details" column
                 cs_df["details"] = cs_df.apply(
                     lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
                                 f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})", axis=1)
-                filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
-                roots = find_roots(filtered_cs_df)
-                hierarchy = build_concept_hierarchy(filtered_cs_df)
-                notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
-                for root in roots:
-                    root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
-                              & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
-                    print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
+
+                if print_concept_hierarchy:
+                    filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
+                    roots = find_roots(filtered_cs_df)
+                    hierarchy = build_concept_hierarchy(filtered_cs_df)
+                    notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
+                    for root in roots:
+                        root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
+                                  & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
+                        print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
                 return concept_stats
             else:
-                notify_users("Cannot connect to the OMOP database to query concept table")
-                return concept_stats
+                err_msg = "Cannot connect to the OMOP database to query concept table"
+                raise ValueError(err_msg)
         except Exception as e:
-            notify_users(f"Error computing cohort concept stats: {e}", level='error')
-            return concept_stats
+            err_msg = f"Error computing cohort concept stats: {e}"
+            raise ValueError(err_msg)
 
     def close(self):
         if self.conn:

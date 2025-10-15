@@ -156,11 +156,8 @@ def test_get_cohort_concept_stats_handles_exception(caplog):
     db = BiasDatabase(":memory:")
     db.omop_cdm_db_url = 'duckdb'
     qry_builder = CohortQueryBuilder(cohort_creation=False)
-    caplog.clear()
-    with caplog.at_level(logging.ERROR):
-        result = db.get_cohort_concept_stats(123, qry_builder)
-    assert 'Error computing cohort concept stats' in caplog.text
-    assert result == {}
+    with pytest.raises(ValueError):
+        db.get_cohort_concept_stats(123, qry_builder)
 
 def test_get_cohort_attributes_handles_exception():
     BiasDatabase._instance = None
@@ -171,6 +168,5 @@ def test_get_cohort_attributes_handles_exception():
     assert result_stats is None
     result = db.get_cohort_distributions(123, 'age')
     assert result is None
-    result = db.get_cohort_concept_stats(123, qry_builder)
-    assert result == {}
-
+    with pytest.raises(ValueError):
+        db.get_cohort_concept_stats(123, qry_builder)

@@ -3,7 +3,7 @@ import datetime
 import logging
 import pytest
 from ipytree import Node
-
+from biasanalyzer.concept import ConceptHierarchy
 from biasanalyzer import __version__
 
 
@@ -105,6 +105,77 @@ def test_compare_cohort_with_no_action(caplog, fresh_bias_obj):
     with caplog.at_level(logging.INFO):
         fresh_bias_obj.compare_cohorts(1, 2)
     assert 'failed to create a valid cohort action object' in caplog.text
+
+def test_cohorts_concept_stats_empty_input_cohorts(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.get_cohorts_concept_stats([])
+    assert 'The input cohorts list is empty. At least one cohort id must be provided.' in caplog.text
+
+def test_cohorts_concept_stats_no_cohort_action(caplog, fresh_bias_obj):
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        fresh_bias_obj.get_cohorts_concept_stats([1])
+    assert 'failed to get concept prevalence stats for the union of cohorts' in caplog.text
+
+def test_cohorts_union_concept_stats(test_db):
+    ConceptHierarchy.clear_cache()
+    # Show what cohorts exist in the test DB and print cohorts and stats so we know what raw data looks like
+    cohorts_df = test_db.bias_db.conn.execute("""
+                                             SELECT cohort_definition_id, COUNT(*) as n_subjects
+                                             FROM cohort
+                                             WHERE cohort_definition_id = 1 or cohort_definition_id = 2     
+                                             GROUP BY cohort_definition_id
+                                             ORDER BY cohort_definition_id
+                                             """).fetchdf()
+    print("Cohorts in DB:\n", cohorts_df.to_string(index=False), flush=True)
+
+    # Show concept stats per cohort (aggregated for clarity)
+    stats_df = test_db.bias_db.conn.execute("""
+                                           SELECT c.cohort_definition_id,
+                                                  co.condition_concept_id,
+                                                  COUNT(*) as n
+                                           FROM cohort c
+                                                    JOIN condition_occurrence co
+                                                         ON c.subject_id = co.person_id
+                                           WHERE c.cohort_definition_id = 1 or c.cohort_definition_id = 2    
+                                           GROUP BY c.cohort_definition_id, co.condition_concept_id
+                                           ORDER BY c.cohort_definition_id, co.condition_concept_id
+                                           """).fetchdf()
+    print("Concept stats per cohort:\n", stats_df.to_string(index=False), flush=True)
+
+    union_result = test_db.get_cohorts_concept_stats([1, 2])
+    print(f'union_result: {union_result}', flush=True)
+    union_result['hierarchy'] = sorted(union_result['hierarchy'], key=lambda x: x['concept_id'])
+    # NOTE: The union_result takes cohort_start_date and cohort_end_date into account
+    # when joining cohort with condition_occurrence for inclusion/exclusion criteria.
+    # That means counts may differ from the raw numbers above. For example:
+    #   - Concept 4041664 appears 5 times in cohort 1 raw, but only 4 fall within
+    #     the cohort window → {'1': {'count': 4}}
+    #   - Concept 4041664 appears 5 times in cohort 2 raw, but only 1 falls within
+    #     the window → {'2': {'count': 1}}
+    #   - Concept 5 disappears entirely, because its single occurrence is outside
+    #     the cohort date window.
+    # This explains why union_result values differ from the raw stats above.
+    assert union_result == {'hierarchy': [
+        {'concept_id': 316139, 'concept_name': 'Heart failure', 'concept_code': '84114007',
+         'metrics': {'1': {'count': 2, 'prevalence': 0.4},
+                     '2': {'count': 2, 'prevalence': 0.5}},
+         'source_cohorts': [1, 2],
+         'parent_ids': [], 'children': []},
+        {'concept_id': 4041664, 'concept_name': 'Difficulty breathing', 'concept_code': '230145002',
+        'metrics': {
+            '1': {'count': 4, 'prevalence': 0.8},
+            '2': {'count': 1, 'prevalence': 0.25}
+        },
+        'source_cohorts': [1, 2],
+        'parent_ids': [], 'children': []},
+        {'concept_id': 37311061, 'concept_name': 'COVID-19', 'concept_code': '840539006',
+         'metrics': {'1': {'count': 4, 'prevalence': 0.8},
+                     '2': {'count': 4, 'prevalence': 1.0}},
+         'source_cohorts': [1, 2],
+         'parent_ids': [], 'children': []},
+    ]}
 
 def test_get_domains_and_vocabularies_invalid(caplog, fresh_bias_obj):
     caplog.clear()

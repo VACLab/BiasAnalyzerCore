@@ -1,5 +1,6 @@
 import time
 from pydantic import ValidationError
+from typing import List
 from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
 from biasanalyzer.cohort import CohortAction
 from biasanalyzer.config import load_config
@@ -155,6 +156,31 @@ class BIAS:
             return created_cohort
         else:
             notify_users('failed to create a valid cohort action object')
+            return None
+
+
+    def get_cohorts_concept_stats(self, cohorts: List[int],
+                                  concept_type: str='condition_occurrence',
+                                  filter_count: int=0,
+                                  vocab=None):
+        """
+        compute concept statistics such as concept prevalence in a union of multiple cohorts
+        :param cohorts: list of cohort ids
+        :param concept_type: concept type to consider with default "condition_occurrence"
+        :param filter_count: filtering out those concepts with less than this count. Default is 0 meaning no filtering
+        :param vocab: vocabulary to consider with default None meaning using the default vocabulary corresponding to
+        the domain instead as defined in DOMAIN_MAPPING variable in models.py
+        :return: ConceptHierarchy object
+        """
+        if not cohorts:
+            notify_users('The input cohorts list is empty. At least one cohort id must be provided.')
+            return None
+        c_action = self._set_cohort_action()
+        if c_action:
+            return c_action.get_cohorts_concept_stats(cohorts, concept_type=concept_type, filter_count=filter_count,
+                                              vocab=vocab)
+        else:
+            notify_users('failed to get concept prevalence stats for the union of cohorts')
             return None
 
 
