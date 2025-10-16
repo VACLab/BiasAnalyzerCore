@@ -1,6 +1,4 @@
-from sqlalchemy.exc import SQLAlchemyError
 from functools import reduce
-import duckdb
 import pandas as pd
 from datetime import datetime
 from tqdm.auto import tqdm
@@ -148,11 +146,7 @@ class CohortAction:
                 progress.update(2)
                 notify_users(f"No cohort is created due to empty results being returned from query")
                 return None
-        except duckdb.Error as e:
-            progress.update(2)
-            notify_users(f"Error executing query: {e}")
-            return None
-        except SQLAlchemyError as e:
+        except Exception as e:
             progress.update(2)
             notify_users(f"Error executing query: {e}")
             if omop_session is not None:
