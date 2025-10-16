@@ -49,17 +49,11 @@ class BIAS:
                 db = self.config['root_omop_cdm_database']['database']
                 db_url = f"postgresql://{user}:{password}@{host}:{port}/{db}"
                 self.omop_cdm_db = OMOPCDMDatabase(db_url)
-                self.bias_db = BiasDatabase(':memory:')
-                # load postgres extension in duckdb bias_db so that cohorts in duckdb can be joined
-                # with OMOP CDM tables in omop_cdm_db
-                self.bias_db.load_postgres_extension()
-                self.bias_db.omop_cdm_db_url = db_url
-
+                self.bias_db = BiasDatabase(':memory:', omop_db_url=db_url)
             elif db_type == 'duckdb':
                 db_path = self.config['root_omop_cdm_database'].get('database', ":memory:")
                 self.omop_cdm_db = OMOPCDMDatabase(db_path)
-                self.bias_db = BiasDatabase(db_path)
-                self.bias_db.omop_cdm_db_url = db_path
+                self.bias_db = BiasDatabase(':memory:', omop_db_url=db_path)
             else:
                 notify_users(f"Unsupported database type: {db_type}")
 

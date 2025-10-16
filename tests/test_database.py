@@ -5,34 +5,6 @@ from biasanalyzer.cohort_query_builder import CohortQueryBuilder
 from biasanalyzer.database import BiasDatabase
 
 
-def test_create_omop_table_postgres(monkeypatch):
-    # Set up tracking dict
-    called = {"executed": False, "query": None}
-
-    # Patch before BiasDatabase instance is created
-    def mock_execute(self, query):
-        called["executed"] = True
-        called["query"] = query
-        return None
-
-    # Monkeypatch at class level first
-    monkeypatch.setattr(duckdb.DuckDBPyConnection, "execute", mock_execute)
-
-    # Now create the instance (so it uses the patched class method)
-    BiasDatabase._instance = None
-    db = BiasDatabase(":memory:")
-    db.omop_cdm_db_url = None
-    result = db._create_omop_table("person")
-    assert result is False
-
-    db.omop_cdm_db_url = "postgresql://user:pass@localhost:5432/mydb"
-
-    result = db._create_omop_table("person")
-
-    assert result is True
-    assert called["executed"] is True
-    assert "postgres_scan" in called["query"]
-
 def test_load_postgres_extension_executes_twice(monkeypatch):
     # Reset singleton to get a clean instance
     BiasDatabase._instance = None
@@ -52,8 +24,8 @@ def test_load_postgres_extension_executes_twice(monkeypatch):
 
     # Assert that execute() was called twice
     assert len(calls) == 2
-    assert "INSTALL postgres_scanner" in calls[0]
-    assert "LOAD postgres_scanner" in calls[1]
+    assert "INSTALL postgres" in calls[0]
+    assert "LOAD postgres" in calls[1]
 
 def test_create_cohort_definition_table_error_on_sequence():
     BiasDatabase._instance = None

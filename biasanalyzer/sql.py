@@ -10,8 +10,8 @@ AGE_DISTRIBUTION_QUERY = '''
                        CURRENT_DATE
                    )
                 ) - p.year_of_birth AS age 
-        FROM cohort c JOIN person p ON c.subject_id = p.person_id
-        WHERE c.cohort_definition_id = {}
+        FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id
+        WHERE c.cohort_definition_id = {cohort_definition_id}
         ),
     -- Define age bins manually using SELECT statements and UNION ALL
     Age_Bins AS (
@@ -63,9 +63,9 @@ GENDER_DISTRIBUTION_QUERY = '''
                     ELSE 'other'
                 END AS gender,
                 p.person_id
-            FROM cohort c 
-            JOIN person p ON c.subject_id = p.person_id 
-            WHERE c.cohort_definition_id = {}
+            FROM {ba_schema}.cohort c 
+            JOIN {omop}.person p ON c.subject_id = p.person_id 
+            WHERE c.cohort_definition_id = {cohort_definition_id}
         ) cd ON gc.gender = cd.gender
         GROUP BY gc.gender
     )
@@ -88,8 +88,8 @@ AGE_STATS_QUERY = '''
                        CURRENT_DATE
                    )
                 ) - p.year_of_birth AS age 
-        FROM cohort c JOIN person p ON c.subject_id = p.person_id
-        WHERE c.cohort_definition_id = {}
+        FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id
+        WHERE c.cohort_definition_id = {cohort_definition_id}
         )
     -- Calculate age distribution statistics    
     SELECT
@@ -111,8 +111,8 @@ GENDER_STATS_QUERY = '''
         END AS gender,     
         COUNT(*) AS gender_count,
         ROUND(COUNT(*) / SUM(COUNT(*)) OVER (), 2) as probability
-    FROM cohort c JOIN person p ON c.subject_id = p.person_id 
-    WHERE c.cohort_definition_id = {}
+    FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id 
+    WHERE c.cohort_definition_id = {cohort_definition_id}
     GROUP BY p.gender_concept_id
 '''
 
@@ -128,8 +128,8 @@ RACE_STATS_QUERY = '''
             END AS race,     
             COUNT(*) AS race_count,
             ROUND(COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS probability
-        FROM cohort c JOIN person p ON c.subject_id = p.person_id
-        WHERE c.cohort_definition_id = {}
+        FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id
+        WHERE c.cohort_definition_id = {cohort_definition_id}
         GROUP BY p.race_concept_id 
 '''
 
@@ -142,7 +142,7 @@ ETHNICITY_STATS_QUERY = '''
         END AS ethnicity,     
         COUNT(*) AS ethnicity_count,
         ROUND(COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS probability
-    FROM cohort c JOIN person p ON c.subject_id = p.person_id
-    WHERE c.cohort_definition_id = {}
+    FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id
+    WHERE c.cohort_definition_id = {cohort_definition_id}
     GROUP BY p.ethnicity_concept_id
 '''

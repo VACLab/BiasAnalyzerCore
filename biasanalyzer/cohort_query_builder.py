@@ -71,9 +71,12 @@ class CohortQueryBuilder:
             temporal_events=temporal_events
         )
 
-    def build_concept_prevalence_query(self, concept_type: str, cid: int, filter_count: int, vocab: str) -> str:
+    def build_concept_prevalence_query(self, db_schema: str, omop_alias: str, concept_type: str, cid: int,
+                                       filter_count: int, vocab: str) -> str:
         """
         Build a SQL query for concept prevalence statistics for a given domain and cohort.
+        :param db_schema: BiasDatabase database schema under which all tables are stored.
+        :param omop_alias: OMOP database alias attached to the BiasDataBase in-memory duckdb
         :param concept_type: Domain from DOMAIN_MAPPING (e.g., 'condition_occurrence').
         :param cid: Cohort definition ID.
         :param filter_count: Minimum count threshold for concepts with 0 meaning no filtering
@@ -93,6 +96,8 @@ class CohortQueryBuilder:
         # Load and render the template
         template = self.env.get_template("cohort_concept_prevalence_query.sql.j2")
         return template.render(
+            db_schema=db_schema,
+            omop=omop_alias,
             table_name=DOMAIN_MAPPING[concept_type]["table"],
             concept_id_column=DOMAIN_MAPPING[concept_type]["concept_id"],
             start_date_column=DOMAIN_MAPPING[concept_type]["start_date"],
