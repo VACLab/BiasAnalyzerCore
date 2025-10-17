@@ -1,6 +1,5 @@
 .idea
 config.yaml
-config_duckdb.yaml
 __pycache__/
 dist/
 .coverage
