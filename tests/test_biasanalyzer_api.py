@@ -68,8 +68,9 @@ def test_set_root_omop(monkeypatch, caplog, fresh_bias_obj):
 
     # --- Step 3: Mock BiasDatabase and its methods ---
     class MockBiasDatabase:
-        def __init__(self, path):
-            self.omop_cdm_db_url = None
+        def __init__(self, path, omop_db_url=None):
+            self.omop_cdm_db_url = "postgresql://testuser:testpass@localhost:5432/testdb"
+            self.omop_db_url = "postgresql://testuser:testpass@localhost:5432/testdb"
 
         def load_postgres_extension(self):
             pass
@@ -123,7 +124,7 @@ def test_cohorts_union_concept_stats(test_db):
     # Show what cohorts exist in the test DB and print cohorts and stats so we know what raw data looks like
     cohorts_df = test_db.bias_db.conn.execute("""
                                              SELECT cohort_definition_id, COUNT(*) as n_subjects
-                                             FROM cohort
+                                             FROM biasanalyzer.cohort
                                              WHERE cohort_definition_id = 1 or cohort_definition_id = 2     
                                              GROUP BY cohort_definition_id
                                              ORDER BY cohort_definition_id
@@ -135,8 +136,8 @@ def test_cohorts_union_concept_stats(test_db):
                                            SELECT c.cohort_definition_id,
                                                   co.condition_concept_id,
                                                   COUNT(*) as n
-                                           FROM cohort c
-                                                    JOIN condition_occurrence co
+                                           FROM biasanalyzer.cohort c
+                                                    JOIN omop.condition_occurrence co
                                                          ON c.subject_id = co.person_id
                                            WHERE c.cohort_definition_id = 1 or c.cohort_definition_id = 2    
                                            GROUP BY c.cohort_definition_id, co.condition_concept_id

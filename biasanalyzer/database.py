@@ -7,7 +7,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
 from biasanalyzer.models import CohortDefinition
-from biasanalyzer.sql import *
+from biasanalyzer.sql import (AGE_DISTRIBUTION_QUERY, GENDER_DISTRIBUTION_QUERY, AGE_STATS_QUERY,
+                              GENDER_STATS_QUERY, RACE_STATS_QUERY, ETHNICITY_STATS_QUERY)
 from biasanalyzer.utils import build_concept_hierarchy, print_hierarchy, find_roots, notify_users
 
 
@@ -29,24 +30,41 @@ class BiasDatabase:
             cls._instance._initialize(*args, **kwargs)  # Initialize only once
         return cls._instance
 
-    def _initialize(self, db_url):
+    def _initialize(self, db_url, omop_db_url=None):
         # by default, duckdb uses in memory database
         self.conn = duckdb.connect(db_url)
-        self.omop_cdm_db_url = None
+        self.schema = "biasanalyzer"
+        self.omop_alias = 'omop'
+        self.conn.execute(f"CREATE SCHEMA IF NOT EXISTS {self.schema}")
+        self.omop_cdm_db_url = omop_db_url
+        if omop_db_url is not None:
+            if omop_db_url.startswith('postgresql://'):
+                # omop db is postgreSQL
+                self.load_postgres_extension()
+                self.conn.execute(f"""            
+                            ATTACH '{self.omop_cdm_db_url}' as {self.omop_alias} (TYPE postgres)
+                            """)
+            elif omop_db_url.endswith('.duckdb'):
+                self.conn.execute(f"""
+                            ATTACH '{self.omop_cdm_db_url}' as {self.omop_alias}
+                            """)
+            else:
+                raise ValueError("Unsupported OMOP database backend")
+
         self._create_cohort_definition_table()
         self._create_cohort_table()
 
     def _create_cohort_definition_table(self):
         try:
-            self.conn.execute('CREATE SEQUENCE id_sequence START 1')
+            self.conn.execute(f'CREATE SEQUENCE {self.schema}.id_sequence START 1')
         except duckdb.Error as e:
             if "already exists" in str(e).lower():
                 notify_users("Sequence already exists, skipping creation.")
             else:
                 raise
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS cohort_definition (
-                      id INTEGER DEFAULT nextval('id_sequence'), 
+        self.conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS {self.schema}.cohort_definition (
+                      id INTEGER DEFAULT nextval('{self.schema}.id_sequence'), 
                       name VARCHAR NOT NULL, 
                       description VARCHAR, 
                       created_date DATE, 
@@ -58,18 +76,19 @@ class BiasDatabase:
         notify_users("Cohort Definition table created.")
 
     def _create_cohort_table(self):
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS cohort (
+        self.conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS {self.schema}.cohort (
                 subject_id BIGINT,
                 cohort_definition_id INTEGER,
                 cohort_start_date DATE,
                 cohort_end_date DATE,
-                FOREIGN KEY (cohort_definition_id) REFERENCES cohort_definition(id)
+                FOREIGN KEY (cohort_definition_id) REFERENCES {self.schema}.cohort_definition(id)
             )
         ''')
         try:
-            self.conn.execute('''
-                CREATE INDEX idx_cohort_dates ON cohort (cohort_definition_id, cohort_start_date, cohort_end_date);
+            self.conn.execute(f'''
+                CREATE INDEX idx_cohort_dates ON {self.schema}.cohort (cohort_definition_id, cohort_start_date, 
+                cohort_end_date);
             ''')
         except duckdb.Error as e:
             if "already exists" in str(e).lower():
@@ -79,12 +98,12 @@ class BiasDatabase:
         notify_users("Cohort table created.")
 
     def load_postgres_extension(self):
-        self.conn.execute("INSTALL postgres_scanner;")
-        self.conn.execute("LOAD postgres_scanner;")
+        self.conn.execute("INSTALL postgres;")
+        self.conn.execute("LOAD postgres;")
 
     def create_cohort_definition(self, cohort_definition: CohortDefinition, progress_obj=None):
-        self.conn.execute('''
-            INSERT INTO cohort_definition (name, description, created_date, creation_info, created_by)
+        self.conn.execute(f'''
+            INSERT INTO {self.schema}.cohort_definition (name, description, created_date, creation_info, created_by)
             VALUES (?, ?, ?, ?, ?)
         ''', (
             cohort_definition.name,
@@ -97,7 +116,7 @@ class BiasDatabase:
             notify_users("Cohort definition inserted successfully.")  # pragma: no cover
         else:
             progress_obj.write("Cohort definition inserted successfully.")
-        self.conn.execute("SELECT id from cohort_definition ORDER BY id DESC LIMIT 1")
+        self.conn.execute(f"SELECT id from {self.schema}.cohort_definition ORDER BY id DESC LIMIT 1")
         created_cohort_id = self.conn.fetchone()[0]
         return created_cohort_id
 
@@ -105,14 +124,14 @@ class BiasDatabase:
     def create_cohort_in_bulk(self, cohort_df: pd.DataFrame):
         # make duckdb to treat cohort_df dataframe as a virtual table named "cohort_df"
         self.conn.register("cohort_df", cohort_df)
-        self.conn.execute('''
-            INSERT INTO cohort (subject_id, cohort_definition_id, cohort_start_date, cohort_end_date)
+        self.conn.execute(f'''
+            INSERT INTO {self.schema}.cohort (subject_id, cohort_definition_id, cohort_start_date, cohort_end_date)
             SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM cohort_df
         ''')
 
     def get_cohort_definition(self, cohort_definition_id):
         results = self.conn.execute(f'''
-        SELECT id, name, description, created_date, creation_info, created_by FROM cohort_definition 
+        SELECT id, name, description, created_date, creation_info, created_by FROM {self.schema}.cohort_definition 
         WHERE id = {cohort_definition_id} 
         ''')
         headers = [desc[0] for desc in results.description]
@@ -124,26 +143,12 @@ class BiasDatabase:
 
     def get_cohort(self, cohort_definition_id):
         results = self.conn.execute(f'''
-        SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM cohort 
+        SELECT subject_id, cohort_definition_id, cohort_start_date, cohort_end_date FROM {self.schema}.cohort 
         WHERE cohort_definition_id = {cohort_definition_id}
         ''')
         headers = [desc[0] for desc in results.description]
         rows = results.fetchall()
         return [dict(zip(headers, row)) for row in rows]
-
-    def _create_omop_table(self, table_name):
-        if self.omop_cdm_db_url is not None and not self.omop_cdm_db_url.endswith('duckdb'):
-            # need to create person table from OMOP CDM postgreSQL database
-            self.conn.execute(f"""
-                CREATE TABLE IF NOT EXISTS {table_name} AS 
-                SELECT * from postgres_scan('{self.omop_cdm_db_url}', 'public', {table_name})
-            """)
-            return True # success
-        elif self.omop_cdm_db_url is None:
-            return False
-        else: # omop table is already included in duckdb
-            return True
-
 
     def _execute_query(self, query_str):
         results = self.conn.execute(query_str)
@@ -163,15 +168,11 @@ class BiasDatabase:
         """
         try:
             if variable:
-                if self._create_omop_table('person'):
-                    query_str = self.__class__.stats_queries.get(variable)
-                    if query_str is None:
-                        raise ValueError(f"Statistics for variable '{variable}' is not available. "
-                                         f"Valid variables are {self.__class__.stats_queries.keys()}")
-                    stats_query = query_str.format(cohort_definition_id)
-                else:
-                    notify_users("Cannot connect to the OMOP database to query person table")
-                    return None
+                query_str = self.__class__.stats_queries.get(variable)
+                if query_str is None:
+                    raise ValueError(f"Statistics for variable '{variable}' is not available. "
+                                     f"Valid variables are {self.__class__.stats_queries.keys()}")
+                stats_query = query_str.format(ba_schema=self.schema, omop=self.omop_alias, cohort_definition_id=cohort_definition_id)
             else:
                 # Query the cohort data to get basic statistics
                 stats_query = f'''
@@ -182,7 +183,7 @@ class BiasDatabase:
                             cohort_end_date,
                             cohort_end_date - cohort_start_date AS duration_days
                         FROM
-                            cohort
+                            {self.schema}.cohort
                         WHERE cohort_definition_id = {cohort_definition_id}    
                     )
                     SELECT
@@ -213,16 +214,13 @@ class BiasDatabase:
         Get distribution statistics for a cohort from the cohort table.
         """
         try:
-            if self._create_omop_table('person'):
-                query_str = self.__class__.distribution_queries.get(variable)
-                if not query_str:
-                    raise ValueError(f"Distribution for variable '{variable}' is not available. "
-                                     f"Valid variables are {self.__class__.distribution_queries.keys()}")
-                query = query_str.format(cohort_definition_id)
-                return self._execute_query(query)
-            else:
-                notify_users("Cannot connect to the OMOP database to query person table")
-                return None
+            query_str = self.__class__.distribution_queries.get(variable)
+            if not query_str:
+                raise ValueError(f"Distribution for variable '{variable}' is not available. "
+                                 f"Valid variables are {self.__class__.distribution_queries.keys()}")
+            query = query_str.format(ba_schema=self.schema, omop=self.omop_alias,
+                                     cohort_definition_id=cohort_definition_id)
+            return self._execute_query(query)
         except Exception as e:
             notify_users(f"Error computing cohort {variable} distributions: {e}", level='error')
             return None
@@ -236,40 +234,35 @@ class BiasDatabase:
         concept_stats = {}
 
         try:
-            if (self._create_omop_table('concept') and self._create_omop_table('concept_ancestor')
-                    and self._create_omop_table(concept_type)):
-                # validate input vocab if it is not None
-                if vocab is not None:
-                    valid_vocabs = self._execute_query("SELECT distinct vocabulary_id FROM concept")
-                    valid_vocab_ids = [row['vocabulary_id'] for row in valid_vocabs]
-                    if vocab not in valid_vocab_ids:
-                        err_msg = (f"input {vocab} is not a valid vocabulary in OMOP. "
-                                   f"Supported vocabulary ids are: {valid_vocab_ids}")
-                        notify_users(err_msg, level='error')
-                        raise ValueError(err_msg)
+            # validate input vocab if it is not None
+            if vocab is not None:
+                valid_vocabs = self._execute_query(f"SELECT distinct vocabulary_id FROM {self.omop_alias}.concept")
+                valid_vocab_ids = [row['vocabulary_id'] for row in valid_vocabs]
+                if vocab not in valid_vocab_ids:
+                    err_msg = (f"input {vocab} is not a valid vocabulary in OMOP. "
+                               f"Supported vocabulary ids are: {valid_vocab_ids}")
+                    notify_users(err_msg, level='error')
+                    raise ValueError(err_msg)
 
-                query = qry_builder.build_concept_prevalence_query(concept_type, cohort_definition_id,
-                                                                   filter_count, vocab)
-                concept_stats[concept_type] = self._execute_query(query)
-                cs_df = pd.DataFrame(concept_stats[concept_type])
-                # Combine concept_name and prevalence into a "details" column
-                cs_df["details"] = cs_df.apply(
-                    lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
-                                f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})", axis=1)
+            query = qry_builder.build_concept_prevalence_query(self.schema, self.omop_alias, concept_type,
+                                                               cohort_definition_id, filter_count, vocab)
+            concept_stats[concept_type] = self._execute_query(query)
+            cs_df = pd.DataFrame(concept_stats[concept_type])
+            # Combine concept_name and prevalence into a "details" column
+            cs_df["details"] = cs_df.apply(
+                lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
+                            f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})", axis=1)
 
-                if print_concept_hierarchy:
-                    filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
-                    roots = find_roots(filtered_cs_df)
-                    hierarchy = build_concept_hierarchy(filtered_cs_df)
-                    notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
-                    for root in roots:
-                        root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
-                                  & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
-                        print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
-                return concept_stats
-            else:
-                err_msg = "Cannot connect to the OMOP database to query concept table"
-                raise ValueError(err_msg)
+            if print_concept_hierarchy:
+                filtered_cs_df = cs_df[cs_df['ancestor_concept_id'] != cs_df['descendant_concept_id']]
+                roots = find_roots(filtered_cs_df)
+                hierarchy = build_concept_hierarchy(filtered_cs_df)
+                notify_users(f'cohort concept hierarchy for {concept_type} with root concept ids {roots}:')
+                for root in roots:
+                    root_detail = cs_df[(cs_df['ancestor_concept_id'] == root)
+                              & (cs_df['descendant_concept_id'] == root)]['details'].iloc[0]
+                    print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
+            return concept_stats
         except Exception as e:
             err_msg = f"Error computing cohort concept stats: {e}"
             raise ValueError(err_msg)

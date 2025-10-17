@@ -1,0 +1,7 @@
+root_omop_cdm_database:
+  database_type: duckdb
+  username: dummy
+  password: dummy
+  hostname: dummy
+  database: /home/hongyi/Downloads/synpuf_100k_omop_54.duckdb
+  port: 5432

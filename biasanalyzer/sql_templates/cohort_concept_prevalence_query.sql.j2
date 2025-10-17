@@ -4,9 +4,9 @@ WITH cohort_events AS (
         e.{{ concept_id_column }} AS concept_id,
         ct.subject_id
     FROM
-        cohort ct
+        {{ db_schema }}.cohort ct
     JOIN
-        {{ table_name }} e ON ct.subject_id = e.person_id
+        {{ omop }}.{{ table_name }} e ON ct.subject_id = e.person_id
         AND e.{{ start_date_column }} >= ct.cohort_start_date
         AND (ct.cohort_end_date IS NULL OR e.{{ start_date_column }} <= ct.cohort_end_date)
     WHERE ct.cohort_definition_id = {{ cid }}
@@ -19,9 +19,9 @@ aggregated_counts AS (
     FROM
         cohort_events ce
     JOIN
-        concept_ancestor ca ON ce.concept_id = ca.descendant_concept_id
+        {{ omop }}.concept_ancestor ca ON ce.concept_id = ca.descendant_concept_id
     JOIN
-        concept anc ON ca.ancestor_concept_id = anc.concept_id
+        {{ omop }}.concept anc ON ca.ancestor_concept_id = anc.concept_id
     WHERE
         anc.vocabulary_id = '{{ vocab }}'
         AND ca.min_levels_of_separation >= 0
@@ -34,7 +34,7 @@ concept_hierarchy AS (
         ca.ancestor_concept_id,
         ca.descendant_concept_id
     FROM
-        concept_ancestor ca
+        {{ omop }}.concept_ancestor ca
     WHERE
         ca.min_levels_of_separation <= 1
         AND ca.descendant_concept_id IN (SELECT concept_id FROM aggregated_counts WHERE count_in_cohort > {{ filter_count }})
@@ -45,7 +45,7 @@ SELECT DISTINCT
     c.concept_name,
     c.concept_code,
     ac.count_in_cohort,
-    (ac.count_in_cohort * 1.0 / (SELECT COUNT(DISTINCT subject_id) FROM cohort WHERE cohort_definition_id = {{ cid }})) AS prevalence,
+    (ac.count_in_cohort * 1.0 / (SELECT COUNT(DISTINCT subject_id) FROM {{ db_schema }}.cohort WHERE cohort_definition_id = {{ cid }})) AS prevalence,
     ch.ancestor_concept_id,
     ch.descendant_concept_id
 FROM
@@ -53,7 +53,7 @@ FROM
 JOIN
     concept_hierarchy ch ON ac.concept_id = ch.descendant_concept_id
 JOIN
-    concept c ON ac.concept_id = c.concept_id
+    {{ omop }}.concept c ON ac.concept_id = c.concept_id
 WHERE
     ac.count_in_cohort > {{ filter_count }}
 ORDER BY
