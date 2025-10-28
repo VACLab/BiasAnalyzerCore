@@ -39,7 +39,7 @@ AGE_DISTRIBUTION_QUERY = '''
     SELECT 
         age_bin,
         bin_count,
-        ROUND(bin_count * 1.0 / SUM(bin_count) OVER (), 4) AS probability -- Normalize to get probability
+        ROUND(bin_count * 1.0 / SUM(bin_count) OVER (), 2) AS probability -- Normalize to get probability
     FROM Age_Distribution
     ORDER BY age_bin                  
 '''
@@ -73,7 +73,7 @@ GENDER_DISTRIBUTION_QUERY = '''
     SELECT 
         gender,
         COALESCE(gender_count, 0) AS gender_count,  -- Ensure that NULL gender counts are treated as 0
-        ROUND(COALESCE(gender_count, 0) * 100.0 / SUM(COALESCE(gender_count, 0)) OVER (), 2) AS probability
+        ROUND(COALESCE(gender_count, 0) * 1.0 / SUM(COALESCE(gender_count, 0)) OVER (), 2) AS probability
     FROM Gender_Distribution
     ORDER BY gender;
 '''
