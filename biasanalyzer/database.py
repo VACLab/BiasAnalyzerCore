@@ -51,6 +51,9 @@ class BiasDatabase:
             else:
                 raise ValueError("Unsupported OMOP database backend")
 
+            # Set self.schema as default schema
+            self.conn.execute(f"SET schema '{self.schema}'")
+
         self._create_cohort_definition_table()
         self._create_cohort_table()
 
