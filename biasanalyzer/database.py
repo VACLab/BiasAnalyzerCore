@@ -1,5 +1,6 @@
 import duckdb
 import pandas as pd
+import gc
 from typing import Optional
 from datetime import datetime
 from tqdm.auto import tqdm
@@ -288,6 +289,14 @@ class OMOPCDMDatabase:
 
     def _initialize(self, db_url):
         if db_url.endswith('.duckdb'):
+            # close any potential global connections if any
+            for obj in gc.get_objects(): # pragma: no cover
+                if isinstance(obj, duckdb.DuckDBPyConnection):
+                    try:
+                        obj.close()
+                    except Exception as e:
+                        notify_users(f'failed to close the lingering duckdb connection before opening a new one: {e}')
+
             # Handle DuckDB connection
             try:
                 self.engine = duckdb.connect(db_url)
