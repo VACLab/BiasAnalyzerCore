@@ -62,15 +62,24 @@ def test_identifier_normalization_and_cache():
     assert ConceptHierarchy._normalize_identifier("1+2+2") == "1+2"
 
     # fake minimal results to build hierarchy
-    results = [
+    results1 = [
         {"ancestor_concept_id": 1, "descendant_concept_id": 1,
          "concept_name": "Diabetes", "concept_code": "DIA",
          "count_in_cohort": 5, "prevalence": 0.5}
     ]
-    h1 = ConceptHierarchy.build_concept_hierarchy_from_results(1, results)
-    h2 = ConceptHierarchy.build_concept_hierarchy_from_results(1, results)
-    assert h1 is h2  # cache reuse
-    assert h1.identifier == "1"
+    results2 = [
+        {"ancestor_concept_id": 1, "descendant_concept_id": 1,
+         "concept_name": "Diabetes2", "concept_code": "DIA",
+         "count_in_cohort": 15, "prevalence": 0.15}
+    ]
+    h1 = ConceptHierarchy.build_concept_hierarchy_from_results(1, 'condition_occurrence', results1)
+    h2 = ConceptHierarchy.build_concept_hierarchy_from_results(1, 'condition_occurrence', results2)
+    assert h1 is h2  # cache reuse even though results2 is different from results1
+    assert h1.identifier == "1-condition_occurrence-0-None"
+    h2 = ConceptHierarchy.build_concept_hierarchy_from_results(1, 'drug_exposure', results2)
+    assert not h1 is h2  # cache is not used since drug_exposure concept_name is different than the cached
+    # condition_occurrence
+    assert h2.identifier == "1-drug_exposure-0-None"
 
 def test_union_and_cache_behavior():
     ConceptHierarchy.clear_cache()
@@ -85,14 +94,14 @@ def test_union_and_cache_behavior():
          "count_in_cohort": 3, "prevalence": 0.3}
     ]
 
-    h1 = ConceptHierarchy.build_concept_hierarchy_from_results(1, results1)
-    h2 = ConceptHierarchy.build_concept_hierarchy_from_results(2, results2)
-    assert "1" in ConceptHierarchy._graph_cache
-    assert "2" in ConceptHierarchy._graph_cache
+    h1 = ConceptHierarchy.build_concept_hierarchy_from_results(1, 'condition_occurrence', results1)
+    h2 = ConceptHierarchy.build_concept_hierarchy_from_results(2, 'condition_occurrence', results2)
+    assert "1-condition_occurrence-0-None" in ConceptHierarchy._graph_cache
+    assert "2-condition_occurrence-0-None" in ConceptHierarchy._graph_cache
     h12 = h1.union(h2)
     h21 = h2.union(h1)
-    assert h12.identifier == "1+2"
-    assert h21.identifier == "1+2"
+    assert h12.identifier == "1-condition_occurrence-0-None+2-condition_occurrence-0-None"
+    assert h21.identifier == "1-condition_occurrence-0-None+2-condition_occurrence-0-None"
     assert h12 is h21
 
 def test_traversal_and_serialization():
@@ -105,7 +114,7 @@ def test_traversal_and_serialization():
          "concept_name": "Child", "concept_code": "C",
          "count_in_cohort": 2, "prevalence": 0.2}
     ]
-    h = ConceptHierarchy.build_concept_hierarchy_from_results(1, results)
+    h = ConceptHierarchy.build_concept_hierarchy_from_results(1, 'condition_occurrence', results)
 
     # roots
     roots = h.get_root_nodes()

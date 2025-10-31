@@ -86,15 +86,20 @@ class ConceptHierarchy:
             return "+".join(parts)
 
     @classmethod
-    def build_concept_hierarchy_from_results(cls, cohort_id: int, results: List[dict]):
+    def build_concept_hierarchy_from_results(cls, cohort_id: int, concept_type: str, results: List[dict],
+                                             filter_count=0, vocab=None):
         """
         build concept hierarchy tree managed by networkx from list of dicts returned from the concept prevalence SQL
-        with cache management
+        with cache management. cohort_id, concept_type, and filter_count are used for caching to uniquely identify
+        a cached concept hierarchy for the specified cohort_id, concept_type, and filter_count.
         :param results: list of dicts from prevalence SQL
         :param cohort_id: cohort id to get concept hierarchy for
+        :param concept_type: concept_type to get concept hierarchy for
+        :param filer_count: filter_count to get concept hierarchy for with default value 0 meaning no filtering
+        :param vocab: vocab to get concept hierarchy for with default value None meaning default vocab will be used
         :return: ConceptHierarchy object
         """
-        identifer = str(cohort_id)
+        identifer = f"{cohort_id}-{concept_type}-{filter_count}-{vocab}"
         if identifer in cls._graph_cache:
             return cls._graph_cache[identifer]
 
@@ -117,7 +122,7 @@ class ConceptHierarchy:
         graph = nx.DiGraph()
         # add nodes with metadata + metrics
         for cid, meta in node_metadata.items():
-            graph.add_node(cid, **meta, metrics={identifer: metrics_by_concept[cid]})
+            graph.add_node(cid, **meta, metrics={str(cohort_id): metrics_by_concept[cid]})
 
         # add parent-child edges
         for row in results:

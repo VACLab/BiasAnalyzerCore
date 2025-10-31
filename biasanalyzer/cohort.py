@@ -63,7 +63,10 @@ class CohortData:
                                                              vocab=vocab,
                                                              print_concept_hierarchy=print_concept_hierarchy)
         return (cohort_stats,
-                ConceptHierarchy.build_concept_hierarchy_from_results(self.cohort_id, cohort_stats[concept_type]))
+                ConceptHierarchy.build_concept_hierarchy_from_results(self.cohort_id, concept_type,
+                                                                      cohort_stats[concept_type],
+                                                                      filter_count=filter_count,
+                                                                      vocab=vocab))
 
 
     def __del__(self):
@@ -162,7 +165,10 @@ class CohortAction:
                                                                       filter_count=filter_count,
                                                                       vocab=vocab)
                                 for c in cohorts]
-        hierarchies = [ConceptHierarchy.build_concept_hierarchy_from_results(c, c_stats.get(concept_type, []))
+        hierarchies = [ConceptHierarchy.build_concept_hierarchy_from_results(c, concept_type,
+                                                                             c_stats.get(concept_type, []),
+                                                                             filter_count=filter_count,
+                                                                             vocab=vocab)
                        for c, c_stats in zip(cohorts, cohort_concept_stats)]
         return reduce(lambda h1, h2: h1.union(h2), hierarchies).to_dict()
 
