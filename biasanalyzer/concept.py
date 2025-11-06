@@ -62,8 +62,9 @@ class ConceptNode:
             "parent_ids": list(self._ch.graph.predecessors(self.id)),
         }
         if include_children:
-            data["children"] = [c.to_dict(include_children=True, include_union_metrics=include_union_metrics)
-                                for c in self.children]
+            data["children"] = [
+                c.to_dict(include_children=True, include_union_metrics=include_union_metrics) for c in self.children
+            ]
 
         return data
 
@@ -87,8 +88,9 @@ class ConceptHierarchy:
             return "+".join(parts)
 
     @classmethod
-    def build_concept_hierarchy_from_results(cls, cohort_id: int, concept_type: str, results: List[dict],
-                                             filter_count=0, vocab=None):
+    def build_concept_hierarchy_from_results(
+        cls, cohort_id: int, concept_type: str, results: List[dict], filter_count=0, vocab=None
+    ):
         """
         build concept hierarchy tree managed by networkx from list of dicts returned from the concept prevalence SQL
         with cache management. cohort_id, concept_type, and filter_count are used for caching to uniquely identify
@@ -148,7 +150,7 @@ class ConceptHierarchy:
         roots = [n for n in self.graph.nodes if self.graph.in_degree(n) == 0]
         root_nodes = [ConceptNode(r, self) for r in roots]
         if serialization:
-            return [rn.to_dict(include_children=False)  for rn in root_nodes]
+            return [rn.to_dict(include_children=False) for rn in root_nodes]
         else:
             return root_nodes
 
@@ -160,8 +162,7 @@ class ConceptHierarchy:
         else:
             return leave_nodes
 
-    def iter_nodes(self, root_id: int, order: str = "bfs",
-                   serialization: bool = False):
+    def iter_nodes(self, root_id: int, order: str = "bfs", serialization: bool = False):
         """Iterate nodes in BFS or DFS order from a given root."""
         if root_id not in self.graph.nodes:
             raise ValueError(f"Root node {root_id} not found in graph.")
@@ -188,9 +189,7 @@ class ConceptHierarchy:
             raise ValueError("order must be 'bfs' or 'dfs'")
 
     def union(self, other: "ConceptHierarchy") -> "ConceptHierarchy":
-        new_ident = ConceptHierarchy._normalize_identifier(
-            f"{self.identifier}+{other.identifier}"
-        )
+        new_ident = ConceptHierarchy._normalize_identifier(f"{self.identifier}+{other.identifier}")
         if new_ident in ConceptHierarchy._graph_cache:
             return ConceptHierarchy._graph_cache[new_ident]
 
@@ -218,8 +217,17 @@ class ConceptHierarchy:
         if root_id is not None:
             if root_id not in self.graph:
                 raise ValueError(f"Input concept id {root_id} not found in the concept hierarchy graph")
-            return {"hierarchy": [ConceptNode(root_id, self).to_dict(include_children=True,
-                                                                     include_union_metrics=include_union_metrics)]}
+            return {
+                "hierarchy": [
+                    ConceptNode(root_id, self).to_dict(
+                        include_children=True, include_union_metrics=include_union_metrics
+                    )
+                ]
+            }
 
-        return {"hierarchy": [r.to_dict(include_children=True, include_union_metrics=include_union_metrics)
-                              for r in self.get_root_nodes()]}
+        return {
+            "hierarchy": [
+                r.to_dict(include_children=True, include_union_metrics=include_union_metrics)
+                for r in self.get_root_nodes()
+            ]
+        }

@@ -9,50 +9,50 @@ DOMAIN_MAPPING = {
         "concept_id": "condition_concept_id",
         "start_date": "condition_start_date",
         "end_date": "condition_end_date",
-        "default_vocab": "SNOMED"  # for use by concept prevalence query
+        "default_vocab": "SNOMED",  # for use by concept prevalence query
     },
     "drug_exposure": {
         "table": "drug_exposure",
         "concept_id": "drug_concept_id",
         "start_date": "drug_exposure_start_date",
         "end_date": "drug_exposure_end_date",
-        "default_vocab": "RxNorm"  # for use by concept prevalence query
+        "default_vocab": "RxNorm",  # for use by concept prevalence query
     },
     "procedure_occurrence": {
         "table": "procedure_occurrence",
         "concept_id": "procedure_concept_id",
         "start_date": "procedure_date",
         "end_date": "procedure_date",
-        "default_vocab": "SNOMED"  # for use by concept prevalence query
+        "default_vocab": "SNOMED",  # for use by concept prevalence query
     },
     "visit_occurrence": {
         "table": "visit_occurrence",
         "concept_id": "visit_concept_id",
         "start_date": "visit_start_date",
         "end_date": "visit_end_date",
-        "default_vocab": "SNOMED"  # for use by concept prevalence query
+        "default_vocab": "SNOMED",  # for use by concept prevalence query
     },
     "measurement": {
         "table": "measurement",
         "concept_id": "measurement_concept_id",
         "start_date": "measurement_date",
         "end_date": "measurement_date",
-        "default_vocab": "LOINC"  # for use by concept prevalence query
+        "default_vocab": "LOINC",  # for use by concept prevalence query
     },
     "observation": {
         "table": "observation",
         "concept_id": "observation_concept_id",
         "start_date": "observation_date",
         "end_date": "observation_date",
-        "default_vocab": "SNOMED"  # for use by concept prevalence query
+        "default_vocab": "SNOMED",  # for use by concept prevalence query
     },
     "date": {  # Special case for static timestamps
         "table": None,
         "concept_id": None,
         "start_date": "timestamp",
-       "end_date": "timestamp",
-        "default_vocab": None
-    }
+        "end_date": "timestamp",
+        "default_vocab": None,
+    },
 }
 
 EVENT_TYPE_LITERAL = Literal[tuple(DOMAIN_MAPPING.keys())]
@@ -60,7 +60,7 @@ EVENT_TYPE_LITERAL = Literal[tuple(DOMAIN_MAPPING.keys())]
 
 ###===========System Configuration==============###
 class RootOMOPCDM(BaseModel):
-    model_config = ConfigDict(extra='ignore')
+    model_config = ConfigDict(extra="ignore")
     username: StrictStr
     password: StrictStr
     hostname: StrictStr
@@ -69,9 +69,12 @@ class RootOMOPCDM(BaseModel):
 
 
 class Configuration(BaseModel):
-    model_config = ConfigDict(extra='ignore')
+    model_config = ConfigDict(extra="ignore")
     root_omop_cdm_database: RootOMOPCDM
+
+
 ###===========System Configuration==============###
+
 
 ###===========CohortDefinition Model==============###
 class CohortDefinition(BaseModel):
@@ -81,7 +84,10 @@ class CohortDefinition(BaseModel):
     created_date: date
     creation_info: str
     created_by: str
+
+
 ###===========CohortDefinition Model==============###
+
 
 ###===========Cohort Model====================###
 class Cohort(BaseModel):
@@ -90,12 +96,15 @@ class Cohort(BaseModel):
     subject_id: int
     cohort_start_date: Optional[date]
     cohort_end_date: Optional[date]
+
+
 ###===========Cohort Model====================###
+
 
 ###=========CohortCreationConfig==================###
 class DemographicsCriteria(BaseModel):
     # Gender with "male" and "female" as valid input
-    gender: Optional[Literal['male', 'female']] = None
+    gender: Optional[Literal["male", "female"]] = None
     # Minimum birth year
     min_birth_year: Optional[int] = None
     max_birth_year: Optional[int] = None
@@ -165,7 +174,7 @@ class TemporalEventGroup(BaseModel):
 
         return values
 
-    def get_interval_sql(self, e1_alias='e1', e2_alias='e2') -> str:
+    def get_interval_sql(self, e1_alias="e1", e2_alias="e2") -> str:
         """Generate SQL for the interval."""
         if not self.interval:  # pragma: no cover
             return ""
@@ -184,4 +193,6 @@ class CohortCreationConfig(BaseModel):
     # cohort creation criteria
     inclusion_criteria: CohortCreationCriteria
     exclusion_criteria: Optional[CohortCreationCriteria] = None
+
+
 ###=========CohortCreationConfig==================###

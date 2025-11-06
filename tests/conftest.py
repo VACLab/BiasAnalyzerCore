@@ -16,9 +16,9 @@ def fresh_bias_obj():
 
 @pytest.fixture(scope="session")
 def test_db():
-    config_file = os.path.join(os.path.dirname(__file__), 'assets', 'config', 'test_config.yaml')
+    config_file = os.path.join(os.path.dirname(__file__), "assets", "config", "test_config.yaml")
     config = load_config(config_file)
-    db_path = config['root_omop_cdm_database']['database']
+    db_path = config["root_omop_cdm_database"]["database"]
     conn = duckdb.connect(db_path)
     conn.execute("""
                 CREATE TABLE IF NOT EXISTS person (
@@ -270,7 +270,6 @@ def test_db():
                                 (7, 4285892, '2023-01-20', '2023-01-20');  -- Person 7: Insulin
                                 -- Person 5: No insulin
                         """)
-
 
     # mock configuration file
     bias = BIAS(config_file_path=config_file)
