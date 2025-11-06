@@ -12,19 +12,20 @@ on:
 
 jobs:
   tests:
-    name: Run Unit Tests
+    name: Run Unit Tests and Lint
     runs-on: ubuntu-22.04
 
     steps:
     # Step 1: Checkout the repository
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # Step 2: Set up Python
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: "3.12.4"  # Use your project’s Python version
+        python-version: "3.12.4"  # Use project’s Python version
+        cache: "poetry"  # Built-in caching for Poetry dependencies
 
     # Step 3: Install Poetry
     - name: Install Poetry
@@ -32,16 +33,28 @@ jobs:
         curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.2.1 python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    # Step 4: Install dependencies
+    # Step 4: Cache dependencies (additional layer, more explicit)
+    - name: Cache Poetry virtualenvs
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pypoetry
+          ~/.cache/pip
+          ~/.local/share/pypoetry/virtualenvs
+        key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          poetry-${{ runner.os }}-
+
+    # Step 5: Install dependencies
     - name: Install dependencies
       run: |
         poetry install --with dev
 
-    # Step 5: Run Tests
+    # Step 6: Run Tests
     - name: Run tests
       run: |
         poetry run pytest -s --cov=biasanalyzer --cov-config=.coveragerc
 
-    # Step 6: Run Ruff check
+    # Step 7: Run Ruff check
     - name: Run ruff
       run: poetry run ruff check .
