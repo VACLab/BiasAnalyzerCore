@@ -1,6 +1,7 @@
 import threading
 import traceback
 
+
 class BackgroundResult:
     def __init__(self):
         self.value = None
@@ -12,6 +13,7 @@ class BackgroundResult:
         self.error = error
         self.ready = True
 
+
 def run_in_background(func, *args, result_holder=None, on_complete=None, **kwargs):
     """
     Run a time-consuming function in background
@@ -22,6 +24,7 @@ def run_in_background(func, *args, result_holder=None, on_complete=None, **kwarg
     :param kwargs: any keyword arguments of the function to be passed in as a dict
     :return: a background thread
     """
+
     def wrapper():
         try:
             print("[*] Background task started...", flush=True)

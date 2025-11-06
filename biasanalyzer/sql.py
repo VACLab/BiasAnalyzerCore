@@ -1,6 +1,6 @@
 # SQL templates for querying in OMOP database
 
-AGE_DISTRIBUTION_QUERY = '''
+AGE_DISTRIBUTION_QUERY = """
     WITH Age_Cohort AS (
         SELECT p.person_id, 
                EXTRACT(YEAR FROM
@@ -42,9 +42,9 @@ AGE_DISTRIBUTION_QUERY = '''
         ROUND(bin_count * 1.0 / SUM(bin_count) OVER (), 2) AS probability -- Normalize to get probability
     FROM Age_Distribution
     ORDER BY age_bin                  
-'''
+"""
 
-GENDER_DISTRIBUTION_QUERY = '''
+GENDER_DISTRIBUTION_QUERY = """
     WITH Gender_Categories AS (
         SELECT 'male' AS gender, 8507 AS gender_concept_id
         UNION ALL SELECT 'female', 8532
@@ -76,9 +76,9 @@ GENDER_DISTRIBUTION_QUERY = '''
         ROUND(COALESCE(gender_count, 0) * 1.0 / SUM(COALESCE(gender_count, 0)) OVER (), 2) AS probability
     FROM Gender_Distribution
     ORDER BY gender;
-'''
+"""
 
-AGE_STATS_QUERY = '''
+AGE_STATS_QUERY = """
     WITH Age_Cohort AS (
         SELECT p.person_id,
             EXTRACT(YEAR FROM
@@ -100,9 +100,9 @@ AGE_STATS_QUERY = '''
         CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY age) AS INT) AS median_age,
         ROUND(STDDEV(age), 2) as stddev_age
     FROM Age_Cohort                
-'''
+"""
 
-GENDER_STATS_QUERY = '''
+GENDER_STATS_QUERY = """
     SELECT
         CASE
             WHEN p.gender_concept_id = 8507 THEN 'male'
@@ -114,9 +114,9 @@ GENDER_STATS_QUERY = '''
     FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id 
     WHERE c.cohort_definition_id = {cohort_definition_id}
     GROUP BY p.gender_concept_id
-'''
+"""
 
-RACE_STATS_QUERY = '''
+RACE_STATS_QUERY = """
         SELECT
             CASE
                 WHEN p.race_concept_id = 8516 THEN 'Black or African American'
@@ -131,9 +131,9 @@ RACE_STATS_QUERY = '''
         FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id
         WHERE c.cohort_definition_id = {cohort_definition_id}
         GROUP BY p.race_concept_id 
-'''
+"""
 
-ETHNICITY_STATS_QUERY = '''
+ETHNICITY_STATS_QUERY = """
     SELECT
         CASE
             WHEN p.ethnicity_concept_id = 38003563 THEN 'Hispanic or Latino'
@@ -145,4 +145,4 @@ ETHNICITY_STATS_QUERY = '''
     FROM {ba_schema}.cohort c JOIN {omop}.person p ON c.subject_id = p.person_id
     WHERE c.cohort_definition_id = {cohort_definition_id}
     GROUP BY p.ethnicity_concept_id
-'''
+"""

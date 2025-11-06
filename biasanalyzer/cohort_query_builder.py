@@ -1,30 +1,33 @@
+# ruff: noqa: S608
+import importlib.resources
 import os
 import sys
-import importlib.resources
-from biasanalyzer.models import TemporalEventGroup, DOMAIN_MAPPING
+
 from jinja2 import Environment, FileSystemLoader
+
+from biasanalyzer.models import DOMAIN_MAPPING, TemporalEventGroup
 
 
 class CohortQueryBuilder:
     def __init__(self, cohort_creation=True):
         """Get the path to SQL templates, whether running from source or installed."""
         try:
-            if sys.version_info >= (3, 9): # pragma: no cover
+            if sys.version_info >= (3, 9):  # pragma: no cover
                 # Python 3.9+: Use importlib.resources.files()
                 template_path = importlib.resources.files("biasanalyzer").joinpath("sql_templates")
-            else:
+            else:  # pragma: no cover
                 # Python 3.8: Use importlib.resources.path() (context manager)
                 with importlib.resources.path("biasanalyzer", "sql_templates") as p:
                     template_path = str(p)
-        except ModuleNotFoundError: # pragma: no cover
+        except ModuleNotFoundError:  # pragma: no cover
             template_path = os.path.join(os.path.dirname(__file__), "sql_templates")
 
-        print(f'template_path: {template_path}')
-        self.env = Environment(loader=FileSystemLoader(template_path), extensions=['jinja2.ext.do'])
+        print(f"template_path: {template_path}")
+        self.env = Environment(loader=FileSystemLoader(template_path), extensions=["jinja2.ext.do"])
         if cohort_creation:
             self.env.globals.update(
-                demographics_filter=self._load_macro('demographics_filter'),
-                temporal_event_filter=self.temporal_event_filter
+                demographics_filter=self._load_macro("demographics_filter"),
+                temporal_event_filter=self.temporal_event_filter,
             )
 
     def _extract_domains(self, events):
@@ -40,7 +43,7 @@ class CohortQueryBuilder:
         """
         Load a macro from macros.sql.j2 into the Jinja2 environment.
         """
-        macros_template = self.env.get_template('macros.sql.j2')
+        macros_template = self.env.get_template("macros.sql.j2")
         return macros_template.module.__dict__[macro_name]
 
     def build_query_cohort_creation(self, cohort_config: dict) -> str:
@@ -49,30 +52,31 @@ class CohortQueryBuilder:
         :param cohort_config: dict object loaded from yaml file for building sql query.
         :return: The rendered SQL query.
         """
-        inclusion_criteria = cohort_config.get('inclusion_criteria')
-        exclusion_criteria = cohort_config.get('exclusion_criteria', {})
+        inclusion_criteria = cohort_config.get("inclusion_criteria")
+        exclusion_criteria = cohort_config.get("exclusion_criteria", {})
         inclusion_events = inclusion_criteria.get("temporal_events", [])
         exclusion_events = exclusion_criteria.get("temporal_events", [])
-        temporal_events = bool(inclusion_events) # Only inclusion_events matter for cohort dates
+        temporal_events = bool(inclusion_events)  # Only inclusion_events matter for cohort dates
         all_domains = self._extract_domains(inclusion_events + exclusion_events)
         # Filter DOMAIN_MAPPING to exclude domains with table: None
-        valid_domains = {k: v for k, v in DOMAIN_MAPPING.items() if v.get('table')}
+        valid_domains = {k: v for k, v in DOMAIN_MAPPING.items() if v.get("table")}
         ranked_domains = {dt: valid_domains[dt] for dt in all_domains if dt in valid_domains}
 
         if not temporal_events:
             # For demographic only inclusion criteria, filter DOMAIN_MAPPING to exclude domains with table: None
             ranked_domains = valid_domains
 
-        template = self.env.get_template(f"cohort_creation_query.sql.j2")
+        template = self.env.get_template("cohort_creation_query.sql.j2")
         return template.render(
             inclusion_criteria=inclusion_criteria,
             exclusion_criteria=exclusion_criteria,
             ranked_domains=ranked_domains,
-            temporal_events=temporal_events
+            temporal_events=temporal_events,
         )
 
-    def build_concept_prevalence_query(self, db_schema: str, omop_alias: str, concept_type: str, cid: int,
-                                       filter_count: int, vocab: str) -> str:
+    def build_concept_prevalence_query(
+        self, db_schema: str, omop_alias: str, concept_type: str, cid: int, filter_count: int, vocab: str
+    ) -> str:
         """
         Build a SQL query for concept prevalence statistics for a given domain and cohort.
         :param db_schema: BiasDatabase database schema under which all tables are stored.
@@ -103,7 +107,7 @@ class CohortQueryBuilder:
             start_date_column=DOMAIN_MAPPING[concept_type]["start_date"],
             cid=cid,
             filter_count=filter_count,
-            vocab=effective_vocab
+            vocab=effective_vocab,
         )
 
     @staticmethod
@@ -149,11 +153,10 @@ class CohortQueryBuilder:
                         {adjusted_start} AS adjusted_start,
                         {adjusted_end} AS adjusted_end
                     FROM {rank_table}
-                    WHERE concept_id = {event['event_concept_id']}{instance_condition}
+                    WHERE concept_id = {event["event_concept_id"]}{instance_condition}
                 """
 
         return base_sql
-
 
     @staticmethod
     def render_event_group(event_group, alias_prefix="evt"):
@@ -166,7 +169,7 @@ class CohortQueryBuilder:
         Returns:
             str: SQL query string for the event group.
         """
-        queries = [] # accumulate SQL queries when called recursively with nested event groups
+        queries = []  # accumulate SQL queries when called recursively with nested event groups
         if "events" not in event_group:  # Single event
             return CohortQueryBuilder.render_event(event_group)
         else:
@@ -174,7 +177,7 @@ class CohortQueryBuilder:
                 event_sql = CohortQueryBuilder.render_event_group(event, f"{alias_prefix}_{i}")
                 if event_sql:
                     queries.append(event_sql)
-            if not queries: # pragma: no cover
+            if not queries:  # pragma: no cover
                 return ""
 
             if event_group["operator"] == "AND":
@@ -196,7 +199,7 @@ class CohortQueryBuilder:
                 combined_sql = f"""
                     SELECT person_id, event_start_date, event_end_date, adjusted_start, adjusted_end
                     FROM (
-                        {' UNION ALL '.join(f'({q})' for q in queries)}
+                        {" UNION ALL ".join(f"({q})" for q in queries)}
                     ) AS all_events
                     WHERE person_id IN (
                         {person_id_sql}
@@ -205,8 +208,10 @@ class CohortQueryBuilder:
                 return combined_sql
 
             elif event_group["operator"] == "OR":
-                return (f"SELECT person_id, event_start_date, event_end_date, adjusted_start, adjusted_end "
-                        f"FROM ({' UNION '.join(queries)}) AS {alias_prefix}_or")
+                return (
+                    f"SELECT person_id, event_start_date, event_end_date, adjusted_start, adjusted_end "
+                    f"FROM ({' UNION '.join(queries)}) AS {alias_prefix}_or"
+                )
             elif event_group["operator"] == "NOT":
                 not_query = queries[0]
                 # Return a query that selects all persons from a base table (e.g., person),
@@ -223,12 +228,12 @@ class CohortQueryBuilder:
                 if len(queries) == 1:
                     # the other query is the timestamp event which has to be handled here as it depends on the other
                     # event in the BEFORE operator
-                    timestamp_event = next((e for e in event_group['events'] if e["event_type"] == "date"), None)
-                    non_timestamp_event = next((e for e in event_group['events'] if e["event_type"] != "date"), None)
+                    timestamp_event = next((e for e in event_group["events"] if e["event_type"] == "date"), None)
+                    non_timestamp_event = next((e for e in event_group["events"] if e["event_type"] != "date"), None)
                     if timestamp_event and non_timestamp_event:
                         timestamp = timestamp_event["timestamp"]
-                        timestamp_event_index = event_group['events'].index(timestamp_event)
-                        non_timestamp_event_index = event_group['events'].index(non_timestamp_event)
+                        timestamp_event_index = event_group["events"].index(timestamp_event)
+                        non_timestamp_event_index = event_group["events"].index(non_timestamp_event)
                         if timestamp_event_index < non_timestamp_event_index:
                             # timestamp needs to happen before non-timestamp event
                             return f"""
@@ -259,7 +264,8 @@ class CohortQueryBuilder:
                                     AND {e1_alias}.event_start_date < {e2_alias}.event_start_date
                                     {interval_sql}
                                     UNION ALL
-                                    SELECT {e2_alias}.person_id, {e2_alias}.event_start_date, {e2_alias}.event_end_date, 
+                                    SELECT {e2_alias}.person_id, {e2_alias}.event_start_date, 
+                                           {e2_alias}.event_end_date, 
                                            {e2_alias}.adjusted_start, {e2_alias}.adjusted_end
                                     FROM ({queries[1]}) AS {e2_alias}
                                     JOIN ({queries[0]}) AS {e1_alias}
@@ -269,7 +275,7 @@ class CohortQueryBuilder:
                             """
             return ""  # pragma: no cover
 
-    def temporal_event_filter(self, event_groups, alias='c'):
+    def temporal_event_filter(self, event_groups, alias="c"):
         """
         Generates the SQL filter for temporal event criteria.
 
@@ -285,14 +291,14 @@ class CohortQueryBuilder:
         for i, event_group in enumerate(event_groups):
             group_sql = self.render_event_group(event_group)
             if group_sql:
-                if alias == 'ex':
+                if alias == "ex":
                     # exclusion criteria
                     filters.append(f"AND {alias}.person_id IN (SELECT person_id FROM ({group_sql}) AS ex_subquery_{i})")
                 else:
                     filters.append(f"({group_sql})")
         if not filters:  # pragma: no cover
             return ""
-        if alias == 'ex':
+        if alias == "ex":
             # For exclusion, combine with AND as filters
             return " ".join(filters)
         else:
@@ -312,9 +318,11 @@ class CohortQueryBuilder:
                 #       events:
                 #         - event_type: drug_exposure
                 #           event_concept_id: 67890
-                return (f"SELECT person_id, event_start_date, event_end_date, "
-                        f"adjusted_start, adjusted_end FROM "
-                        f"({' UNION ALL '.join(filters)}) AS combined_events")
+                return (
+                    f"SELECT person_id, event_start_date, event_end_date, "
+                    f"adjusted_start, adjusted_end FROM "
+                    f"({' UNION ALL '.join(filters)}) AS combined_events"
+                )
 
             # Single event group case with operator defined
             return filters[0]

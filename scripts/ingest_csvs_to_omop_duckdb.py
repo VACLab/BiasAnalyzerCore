@@ -1,3 +1,5 @@
+# ruff: noqa: S608
+
 """
 This script ingests both clinical and vocabulary OMOP CSV exports into a single DckDB database for
 downstream use of the core BiasAnalyzer python library.
@@ -8,17 +10,18 @@ Example for running this script:
         --output data/omop.duckdb
 """
 
-import duckdb
-import time
 import argparse
 import sys
+import time
 from pathlib import Path
+
+import duckdb
 
 
 def load_csv_to_duckdb(con, csv_path: Path, table_name: str):
     """Load a single CSV file into DuckDB."""
     t0 = time.time()
-    print(f'loading {table_name} from {csv_path}')
+    print(f"loading {table_name} from {csv_path}")
     con.execute(f"""
         CREATE OR REPLACE TABLE {table_name} AS
         SELECT * FROM read_csv_auto('{csv_path}', header=True, quote='', parallel=True)
@@ -45,12 +48,19 @@ def ingest_directory(con, csv_dir: Path):
 
 def main():
     parser = argparse.ArgumentParser(description="Ingest OMOP CSVs into DuckDB")
-    parser.add_argument("--clinical", type=Path, required=False,
-                        help="Directory containing OMOP clinical CSVs (person, condition_occurrence, etc.)")
-    parser.add_argument("--vocab", type=Path, required=False,
-                        help="Directory containing OMOP vocabulary CSVs (concept, concept_relationship, etc.)")
-    parser.add_argument("--output", type=Path, required=True,
-                        help="Output DuckDB file path")
+    parser.add_argument(
+        "--clinical",
+        type=Path,
+        required=False,
+        help="Directory containing OMOP clinical CSVs (person, condition_occurrence, etc.)",
+    )
+    parser.add_argument(
+        "--vocab",
+        type=Path,
+        required=False,
+        help="Directory containing OMOP vocabulary CSVs (concept, concept_relationship, etc.)",
+    )
+    parser.add_argument("--output", type=Path, required=True, help="Output DuckDB file path")
 
     args = parser.parse_args()
 
@@ -84,6 +94,7 @@ def main():
 
     print(f"Ingestion complete with {len(all_results)} tables loaded. Details shown below:")
     print(f"\n{all_results}")
+
 
 if __name__ == "__main__":
     main()

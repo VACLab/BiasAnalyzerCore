@@ -1,8 +1,8 @@
-import numpy as np
-import re
-from ipytree import Node
 import logging
+import re
 
+import numpy as np
+from ipytree import Node
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +29,14 @@ def notify_users(message: str, level: str = "info"):
 
 def get_direction_arrow(tree_type):
     # the two unicodes are for up and down arrows
-    return "\U0001F53C" if tree_type == 'parents' else "\U0001F53D"
+    return "\U0001f53c" if tree_type == "parents" else "\U0001f53d"
 
 
 def clean_string(text):
     # replace newlines and tabs with a space
-    text = re.sub(r'[\n\t]', ' ', text)
+    text = re.sub(r"[\n\t]", " ", text)
     # Replace multiple spaces with a single space
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"\s+", " ", text)
     # Strip leading and trailing spaces
     return text.strip()
 
@@ -55,23 +55,21 @@ def hellinger_distance(p, q):
     return np.sqrt(0.5 * np.sum((np.sqrt(p) - np.sqrt(q)) ** 2))
 
 
-def build_concept_hierarchy(df, parent_col="ancestor_concept_id", child_col="descendant_concept_id",
-                            details_col="details"):
+def build_concept_hierarchy(
+    df, parent_col="ancestor_concept_id", child_col="descendant_concept_id", details_col="details"
+):
     """
     Builds a hierarchy using only direct parent-child relationships to remove duplicate branches.
     """
     grouped = df.groupby(parent_col)
-    hierarchy = {
-        parent: list(zip(group[child_col], group[details_col]))
-        for parent, group in grouped
-    }
+    hierarchy = {parent: list(zip(group[child_col], group[details_col])) for parent, group in grouped}
     return hierarchy
 
 
 def build_concept_tree(concept_tree: dict, tree_type: str) -> Node:
     """
-        Recursively builds an ipytree Node for a given concept tree.
-        """
+    Recursively builds an ipytree Node for a given concept tree.
+    """
     # Extract concept details
     details = concept_tree.get("details", {})
     concept_name = details.get("concept_name", "Unknown Concept")
@@ -111,5 +109,5 @@ def print_hierarchy(hierarchy, parent=None, level=0, parent_details=None):
         print(parent_details)
         level += 1
     for child, details in hierarchy[parent]:
-        print(f"  " * level + details)
+        print("  " * level + details)
         print_hierarchy(hierarchy, parent=child, level=level + 1)

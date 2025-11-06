@@ -1,4 +1,4 @@
-name: test
+name: Tests and Lint
 
 on:
   # Trigger workflow on pull requests to the main branch
@@ -11,32 +11,46 @@ on:
       - main
 
 jobs:
-  test:
+  tests:
+    name: Run Unit Tests and Lint
     runs-on: ubuntu-22.04
 
     steps:
     # Step 1: Checkout the repository
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    # Step 2: Set up Python
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.8.18"  # Use your project’s Python version
-
-    # Step 3: Install Poetry
+      # Step 3: Install Poetry
     - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.4 python3 -
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+      uses: snok/install-poetry@v1
+      with:
+        version: 2.2.1
+        virtualenvs-create: true
+        virtualenvs-in-project: true
 
-    # Step 4: Install dependencies
+    - name: Verify Poetry install
+      run: |
+        echo "PATH is: $PATH"
+        which poetry
+        poetry --version
+
+      # Step 2: Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"  # Use project’s Python version
+        cache: "poetry"
+
+    # Step 5: Install dependencies
     - name: Install dependencies
       run: |
         poetry install --with dev
 
-    # Step 5: Run Tests
+    # Step 6: Run Tests
     - name: Run tests
       run: |
         poetry run pytest -s --cov=biasanalyzer --cov-config=.coveragerc
+
+    # Step 7: Run Ruff check
+    - name: Run ruff
+      run: poetry run ruff check .
