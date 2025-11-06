@@ -1,6 +1,6 @@
+
 import pytest
-from functools import reduce
-from biasanalyzer.concept import ConceptHierarchy, ConceptNode
+from biasanalyzer.concept import ConceptHierarchy
 
 
 def test_cohort_concept_hierarchical_prevalence(test_db, caplog):
@@ -77,7 +77,7 @@ def test_identifier_normalization_and_cache():
     assert h1 is h2  # cache reuse even though results2 is different from results1
     assert h1.identifier == "1-condition_occurrence-0-None"
     h2 = ConceptHierarchy.build_concept_hierarchy_from_results(1, 'drug_exposure', results2)
-    assert not h1 is h2  # cache is not used since drug_exposure concept_name is different than the cached
+    assert h1 is not h2  # cache is not used since drug_exposure concept_name is different than the cached
     # condition_occurrence
     assert h2.identifier == "1-drug_exposure-0-None"
 

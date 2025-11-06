@@ -1,16 +1,24 @@
+import gc
+from datetime import datetime
+from typing import Optional
+
 import duckdb
 import pandas as pd
-import gc
-from typing import Optional
-from datetime import datetime
-from tqdm.auto import tqdm
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import sessionmaker
+from tqdm.auto import tqdm
+
 from biasanalyzer.models import CohortDefinition
-from biasanalyzer.sql import (AGE_DISTRIBUTION_QUERY, GENDER_DISTRIBUTION_QUERY, AGE_STATS_QUERY,
-                              GENDER_STATS_QUERY, RACE_STATS_QUERY, ETHNICITY_STATS_QUERY)
-from biasanalyzer.utils import build_concept_hierarchy, print_hierarchy, find_roots, notify_users
+from biasanalyzer.sql import (
+    AGE_DISTRIBUTION_QUERY,
+    AGE_STATS_QUERY,
+    ETHNICITY_STATS_QUERY,
+    GENDER_DISTRIBUTION_QUERY,
+    GENDER_STATS_QUERY,
+    RACE_STATS_QUERY,
+)
+from biasanalyzer.utils import build_concept_hierarchy, find_roots, notify_users, print_hierarchy
 
 
 class BiasDatabase:
@@ -27,7 +35,7 @@ class BiasDatabase:
     _instance = None  # indicating a singleton with only one instance of the class ever created
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(BiasDatabase, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._initialize(*args, **kwargs)  # Initialize only once
         return cls._instance
 
@@ -176,7 +184,8 @@ class BiasDatabase:
                 if query_str is None:
                     raise ValueError(f"Statistics for variable '{variable}' is not available. "
                                      f"Valid variables are {self.__class__.stats_queries.keys()}")
-                stats_query = query_str.format(ba_schema=self.schema, omop=self.omop_alias, cohort_definition_id=cohort_definition_id)
+                stats_query = query_str.format(ba_schema=self.schema, omop=self.omop_alias,
+                                               cohort_definition_id=cohort_definition_id)
             else:
                 # Query the cohort data to get basic statistics
                 stats_query = f'''
@@ -268,8 +277,7 @@ class BiasDatabase:
                     print_hierarchy(hierarchy, parent=root, level=0, parent_details=root_detail)
             return concept_stats
         except Exception as e:
-            err_msg = f"Error computing cohort concept stats: {e}"
-            raise ValueError(err_msg)
+            raise ValueError("Error computing cohort concept stats") from e
 
     def close(self):
         if self.conn:
@@ -283,7 +291,7 @@ class OMOPCDMDatabase:
     _database_type = None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(OMOPCDMDatabase, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._initialize(*args, **kwargs)  # Initialize only once
         return cls._instance
 
@@ -475,7 +483,8 @@ class OMOPCDMDatabase:
 
         progress.set_postfix_str(stages[1])
         # Collect all unique concept IDs involved in the hierarchy using set comprehension
-        concept_ids = {row['ancestor_concept_id'] for row in results} | {row['descendant_concept_id'] for row in results}
+        concept_ids = {row['ancestor_concept_id'] for row in results} | {row['descendant_concept_id']
+                                                                         for row in results}
         # Fetch details of each concept
         concept_details = {}
         if concept_ids:

@@ -1,13 +1,15 @@
 import time
-from pydantic import ValidationError
 from typing import List
-from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
+
+from IPython.display import display
+from ipytree import Tree
+from ipywidgets import Label, VBox
+from pydantic import ValidationError
+
 from biasanalyzer.cohort import CohortAction
 from biasanalyzer.config import load_config
-from ipywidgets import VBox, Label
-from ipytree import Tree
-from IPython.display import display
-from biasanalyzer.utils import get_direction_arrow, notify_users, build_concept_tree
+from biasanalyzer.database import BiasDatabase, OMOPCDMDatabase
+from biasanalyzer.utils import build_concept_tree, get_direction_arrow, notify_users
 
 
 class BIAS:

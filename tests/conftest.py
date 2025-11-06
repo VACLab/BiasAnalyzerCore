@@ -1,8 +1,9 @@
-import pytest
+import os
+
 import duckdb
+import pytest
 from biasanalyzer.api import BIAS
 from biasanalyzer.config import load_config
-import os
 
 
 @pytest.fixture
@@ -145,7 +146,7 @@ def test_db():
                     (37311061, 'COVID-19', '2012-04-01', '2020-04-01', '840539006', 'SNOMED', 'Condition'),
                     (4041664, 'Difficulty breathing', '2012-04-01', '2020-04-01', '230145002', 'SNOMED', 'Condition'),
                     (316139, 'Heart failure', '2012-04-01', '2020-04-01', '84114007', 'SNOMED', 'Condition'),
-                    (201826, 'Type 2 diabetes mellitus', '2012-04-01', '2020-04-01', '44054006', 'SNOMED', 'Condition');                    
+                    (201826, 'Type 2 diabetes mellitus', '2012-04-01', '2020-04-01', '44054006', 'SNOMED', 'Condition')
             """)
 
     # Insert hierarchical relationships as needed
@@ -175,7 +176,8 @@ def test_db():
     result = conn.execute("SELECT COUNT(*) FROM condition_occurrence").fetchone()
     if result[0] == 0:
         conn.execute("""
-                INSERT INTO condition_occurrence (person_id, condition_concept_id, condition_start_date, condition_end_date)
+                INSERT INTO condition_occurrence (person_id, condition_concept_id, condition_start_date, 
+                                                  condition_end_date)
                 VALUES
                     (101, 2, '2023-01-01', '2023-01-31'), -- Patient 101 has Type 1 Diabetes
                     (101, 3, '2023-01-01', '2023-02-27'), -- Patient 101 has Type 2 Diabetes
@@ -215,7 +217,8 @@ def test_db():
     result = conn.execute("SELECT COUNT(*) FROM visit_occurrence").fetchone()
     if result[0] == 0:
         conn.execute("""
-                    INSERT INTO visit_occurrence (person_id, visit_occurrence_id, visit_concept_id, visit_start_date, visit_end_date)
+                    INSERT INTO visit_occurrence (person_id, visit_occurrence_id, visit_concept_id, visit_start_date, 
+                                                  visit_end_date)
                     VALUES 
                         (108, 1, 9201, '2020-04-13', '2020-04-14'), -- Inpatient Visit
                         (108, 2, 9201, '2020-04-16', '2020-04-27'), -- Second inpatient visit (meets criteria)
@@ -239,7 +242,8 @@ def test_db():
         result = conn.execute("SELECT COUNT(*) FROM procedure_occurrence").fetchone()
         if result[0] == 0:
             conn.execute("""
-                        INSERT INTO procedure_occurrence (person_id, procedure_occurrence_id, procedure_concept_id, procedure_date)
+                        INSERT INTO procedure_occurrence (person_id, procedure_occurrence_id, procedure_concept_id, 
+                                                          procedure_date)
                         VALUES 
                             (1, 1, 4048609, '2020-06-20'),  -- Person 1: Blood test
                             (2, 2, 4048609, '2020-06-20'),  -- Person 2: Blood test
@@ -255,7 +259,8 @@ def test_db():
         result = conn.execute("SELECT COUNT(*) FROM drug_exposure").fetchone()
         if result[0] == 0:
             conn.execute("""
-                            INSERT INTO drug_exposure (person_id, drug_concept_id, drug_exposure_start_date, drug_exposure_end_date)
+                            INSERT INTO drug_exposure (person_id, drug_concept_id, drug_exposure_start_date, 
+                                                       drug_exposure_end_date)
                             VALUES 
                                 (1, 4285892, '2020-06-15', '2020-06-15'),  -- Person 1: Insulin 14 days after
                                 (2, 4285892, '2020-06-15', '2020-06-15'),  -- Person 2: Insulin

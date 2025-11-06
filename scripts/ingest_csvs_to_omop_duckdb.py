@@ -8,11 +8,12 @@ Example for running this script:
         --output data/omop.duckdb
 """
 
-import duckdb
-import time
 import argparse
 import sys
+import time
 from pathlib import Path
+
+import duckdb
 
 
 def load_csv_to_duckdb(con, csv_path: Path, table_name: str):

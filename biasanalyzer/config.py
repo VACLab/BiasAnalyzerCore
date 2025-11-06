@@ -1,5 +1,6 @@
 import yaml
-from biasanalyzer.models import Configuration, CohortCreationConfig
+
+from biasanalyzer.models import CohortCreationConfig, Configuration
 
 
 def load_config(config_file):

@@ -10,28 +10,74 @@ include = [
     {path = "biasanalyzer/sql_templates/*.sql", format=["sdist", "wheel"]}
 ]
 [tool.poetry.dependencies]
-python = ">=3.8.10,<3.12"
+python = ">=3.8.10,<3.13"
 duckdb = "^1.1.1"
 pandas = "2.0.3"
-scipy = "1.10.1"
-numpy = "1.24.4"
+
+scipy = [
+    {version = ">=1.10.1,<1.11", markers = "python_version<'3.12'"},
+    {version = ">=1.14.1,<1.15", markers = "python_version>='3.12'"}
+]
+numpy = [
+    {version = ">=1.24.4,<1.25", markers = "python_version<'3.12'"},
+    {version = ">=1.25.0,<=1.26.4", markers = "python_version>='3.12'"}
+]
 duckdb-engine = "^0.13.2"
 sqlalchemy = "^2.0.35"
 pyyaml = "^6.0.2"
 pydantic = "^2.9.2"
-psycopg2 = "^2.9.1"
+psycopg2 = "^2.9.9"
 ipytree = "^0.2.2"
 ipywidgets = "^8.1.5"
 jinja2 = "3.1.6"
 tqdm = "4.67.1"
 networkx = "3.1"
 
-[tool.poetry.dev-dependencies]
-pytest = "^8.3.3"
-
 [tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
 pytest-cov = "5.0.0"
+ruff = "^0.14.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+# ----------------------------
+# Ruff configuration
+# ----------------------------
+[tool.ruff]
+# Linting targets your source and test code
+target-version = "py38"
+src = ["biasanalyzer", "tests", "scripts"]
+line-length = 120
+
+# Enable full linting set roughly equivalent to Flake8 + isort + pyupgrade
+lint.select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort-style import sorting
+    "B",  # flake8-bugbear
+    "UP", # pyupgrade
+    "N",  # pep8-naming
+    "S",  # security (flake8-bandit subset)
+]
+lint.ignore = ["S101", "N805", "S701"]
+
+# Automatically fix simple issues on save (optional)
+fix = true
+
+# Exclude build/test caches and notebooks
+exclude = [
+    ".venv",
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "notebooks",
+]
+
+[tool.ruff.format]
+# Ruff's built-in formatter replaces Black
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"

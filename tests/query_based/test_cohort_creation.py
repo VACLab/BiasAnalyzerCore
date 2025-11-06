@@ -1,10 +1,11 @@
-import os
 import datetime
 import logging
+import os
+
 import pytest
-from sqlalchemy.exc import SQLAlchemyError
-from numpy.ma.testutils import assert_equal
 from biasanalyzer.models import DemographicsCriteria, TemporalEvent, TemporalEventGroup
+from numpy.ma.testutils import assert_equal
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def test_cohort_yaml_validation(test_db):

@@ -1,10 +1,11 @@
-import os
 import datetime
 import logging
+import os
+
 import pytest
-from ipytree import Node
-from biasanalyzer.concept import ConceptHierarchy
 from biasanalyzer import __version__
+from biasanalyzer.concept import ConceptHierarchy
+from ipytree import Node
 
 
 def test_version():

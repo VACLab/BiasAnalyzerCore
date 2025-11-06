@@ -1,13 +1,10 @@
 import os
 
-from biasanalyzer.config import load_config, load_cohort_creation_config
+from biasanalyzer.config import load_cohort_creation_config, load_config
 
 
 def test_load_config():
-    try:
-        config = load_config(os.path.join(os.path.dirname(__file__), 'assets', 'config', 'test_config.yaml'))
-    except Exception as e:
-        assert False, f"load_config() raised an exception: {e}"
+    config = load_config(os.path.join(os.path.dirname(__file__), 'assets', 'config', 'test_config.yaml'))
 
     assert config.get('root_omop_cdm_database') == {
         'database_type': 'duckdb',
@@ -19,14 +16,9 @@ def test_load_config():
     }
 
 def test_load_cohort_creation_config():
-    try:
-        config = load_cohort_creation_config(
-            os.path.join(os.path.dirname(__file__), 'assets', 'cohort_creation',
-                         'test_cohort_creation_condition_occurrence_config.yaml'))
-    except Exception as e:
-        assert False, f"test_load_cohort_creation_config() raised an exception: {e}"
-
-
+    config = load_cohort_creation_config(
+        os.path.join(os.path.dirname(__file__), 'assets', 'cohort_creation',
+                     'test_cohort_creation_condition_occurrence_config.yaml'))
     assert 'inclusion_criteria' in config
     # assert 'exclusion_criteria' in config
     assert 'temporal_events' in config.get('inclusion_criteria')

@@ -1,8 +1,8 @@
-import numpy as np
-import re
-from ipytree import Node
 import logging
+import re
 
+import numpy as np
+from ipytree import Node
 
 logger = logging.getLogger(__name__)
 
@@ -111,5 +111,5 @@ def print_hierarchy(hierarchy, parent=None, level=0, parent_details=None):
         print(parent_details)
         level += 1
     for child, details in hierarchy[parent]:
-        print(f"  " * level + details)
+        print("  " * level + details)
         print_hierarchy(hierarchy, parent=child, level=level + 1)

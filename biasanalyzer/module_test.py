@@ -1,8 +1,10 @@
-import pprint
-from biasanalyzer.api import BIAS
-import time
 import os
+import pprint
+import time
+
 import pandas as pd
+
+from biasanalyzer.api import BIAS
 
 
 def cohort_creation_template_test(bias_obj):
@@ -64,18 +66,21 @@ def condition_cohort_test(bias_obj):
         print(f"Root: {root}", flush=True)
         print(f"Leaves: {leaves}", flush=True)
         for node in cohort_concept_hierarchy.iter_nodes(root_nodes[0].id, serialization=True):
-          print(node)
+            print(node)
 
         hier_dict = cohort_concept_hierarchy.to_dict()
-        pprint.pprint(hier_dict, indent=2)
+        with open('diabetics_condition_occurrence_hierarchy_dict.txt', 'w') as cof:
+            pprint.pprint(hier_dict, indent=2, stream=cof)
 
 
         _, cohort_de_concept_hierarchy = cohort_data.get_concept_stats(concept_type='drug_exposure',
                                                                        filter_count=500)
         de_hier_dict = cohort_de_concept_hierarchy.to_dict()
-        pprint.pprint(de_hier_dict, indent=2)
-        compare_stats = bias_obj.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
-        print(f'compare_stats: {compare_stats}')
+        with open('diabetics_drug_exposure_hierarchy_dict.txt', 'w') as dof:
+            pprint.pprint(de_hier_dict, indent=2, stream=dof)
+        # compare_stats = bias_obj.compare_cohorts(cohort_data.metadata['id'], cohort_data.metadata['id'])
+        # print(f'compare_stats: {compare_stats}')
+        print(f'times taken for computing cohort concept hierarcy: {time.time() - t1}')
     return
 
 
@@ -95,9 +100,9 @@ def concept_test(bias_obj):
     print(bias_obj.display_concept_tree(parent_concept_tree))
     print('children concept hierarchy for COVID-19 in text format:')
     print(bias_obj.display_concept_tree(children_concept_tree))
-    print(f'parent concept hierarchy for COVID-19 in widget tree format:')
+    print('parent concept hierarchy for COVID-19 in widget tree format:')
     bias_obj.display_concept_tree(parent_concept_tree, show_in_text_format=False)
-    print(f'children concept hierarchy for COVID-19 in widget tree format:')
+    print('children concept hierarchy for COVID-19 in widget tree format:')
     bias_obj.display_concept_tree(children_concept_tree, show_in_text_format=False)
     return
 

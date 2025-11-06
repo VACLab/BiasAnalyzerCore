@@ -1,7 +1,7 @@
-from pydantic import BaseModel, StrictStr, ConfigDict, field_validator, model_validator
-from typing import Optional, Literal, List, Union
 from datetime import date
+from typing import List, Literal, Optional, Union
 
+from pydantic import BaseModel, ConfigDict, StrictStr, field_validator, model_validator
 
 DOMAIN_MAPPING = {
     "condition_occurrence": {

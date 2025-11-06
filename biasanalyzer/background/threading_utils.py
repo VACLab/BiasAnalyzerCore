@@ -1,6 +1,7 @@
 import threading
 import traceback
 
+
 class BackgroundResult:
     def __init__(self):
         self.value = None

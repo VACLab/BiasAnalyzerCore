@@ -1,6 +1,7 @@
+from unittest.mock import Mock
+
 import duckdb
 import pytest
-from unittest.mock import Mock
 from biasanalyzer.cohort_query_builder import CohortQueryBuilder
 from biasanalyzer.database import BiasDatabase
 
@@ -43,7 +44,7 @@ def test_bias_db_postgres_omop_db_url(monkeypatch):
     # Mock duckdb.connect to return our MockConn
     mock_connect = Mock(return_value=MockConn())
     monkeypatch.setattr("duckdb.connect", mock_connect)
-    db = BiasDatabase(":memory:", omop_db_url="postgresql://testuser:testpass@localhost:5432/testdb")
+    BiasDatabase(":memory:", omop_db_url="postgresql://testuser:testpass@localhost:5432/testdb")
 
     assert len(calls) >= 3
     assert any("INSTALL postgres" in call for call in calls), "INSTALL postgres must be run at BiasDatabase init"
@@ -53,7 +54,7 @@ def test_bias_db_postgres_omop_db_url(monkeypatch):
 def test_bias_db_invalid_omop_db_url():
     BiasDatabase._instance = None
     with pytest.raises(ValueError, match='Unsupported OMOP database backend'):
-        db = BiasDatabase(":memory:", omop_db_url='dummy_invalid_url')
+        BiasDatabase(":memory:", omop_db_url='dummy_invalid_url')
 
 def test_create_cohort_definition_table_error_on_sequence():
     BiasDatabase._instance = None

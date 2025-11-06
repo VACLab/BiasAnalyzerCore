@@ -1,6 +1,7 @@
-import networkx as nx
-from typing import List, Optional, Union
 from _collections import deque
+from typing import List, Optional, Union
+
+import networkx as nx
 
 
 class ConceptNode:
@@ -153,7 +154,7 @@ class ConceptHierarchy:
 
     def get_leaf_nodes(self, serialization: bool = False) -> List:
         leaves = [n for n in self.graph.nodes if self.graph.out_degree(n) == 0]
-        leave_nodes = [ConceptNode(l, self) for l in leaves]
+        leave_nodes = [ConceptNode(lv, self) for lv in leaves]
         if serialization:
             return [ln.to_dict(include_children=False) for ln in leave_nodes]
         else:

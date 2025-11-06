@@ -1,15 +1,17 @@
-from functools import reduce
-import pandas as pd
 from datetime import datetime
-from tqdm.auto import tqdm
-from pydantic import ValidationError
+from functools import reduce
 from typing import List
-from biasanalyzer.models import CohortDefinition
-from biasanalyzer.config import load_cohort_creation_config
-from biasanalyzer.database import OMOPCDMDatabase, BiasDatabase
-from biasanalyzer.utils import hellinger_distance, clean_string, notify_users
+
+import pandas as pd
+from pydantic import ValidationError
+from tqdm.auto import tqdm
+
 from biasanalyzer.cohort_query_builder import CohortQueryBuilder
 from biasanalyzer.concept import ConceptHierarchy
+from biasanalyzer.config import load_cohort_creation_config
+from biasanalyzer.database import BiasDatabase, OMOPCDMDatabase
+from biasanalyzer.models import CohortDefinition
+from biasanalyzer.utils import clean_string, hellinger_distance, notify_users
 
 
 class CohortData:
@@ -147,7 +149,7 @@ class CohortAction:
                 return CohortData(cohort_id=cohort_def_id, bias_db=self.bias_db, omop_db=self.omop_db)
             else:
                 progress.update(2)
-                notify_users(f"No cohort is created due to empty results being returned from query")
+                notify_users("No cohort is created due to empty results being returned from query")
                 return None
         except Exception as e:
             progress.update(2)

@@ -1,8 +1,10 @@
+import importlib.resources
 import os
 import sys
-import importlib.resources
-from biasanalyzer.models import TemporalEventGroup, DOMAIN_MAPPING
+
 from jinja2 import Environment, FileSystemLoader
+
+from biasanalyzer.models import DOMAIN_MAPPING, TemporalEventGroup
 
 
 class CohortQueryBuilder:
@@ -12,7 +14,7 @@ class CohortQueryBuilder:
             if sys.version_info >= (3, 9): # pragma: no cover
                 # Python 3.9+: Use importlib.resources.files()
                 template_path = importlib.resources.files("biasanalyzer").joinpath("sql_templates")
-            else:
+            else: # pragma: no cover
                 # Python 3.8: Use importlib.resources.path() (context manager)
                 with importlib.resources.path("biasanalyzer", "sql_templates") as p:
                     template_path = str(p)
@@ -63,7 +65,7 @@ class CohortQueryBuilder:
             # For demographic only inclusion criteria, filter DOMAIN_MAPPING to exclude domains with table: None
             ranked_domains = valid_domains
 
-        template = self.env.get_template(f"cohort_creation_query.sql.j2")
+        template = self.env.get_template("cohort_creation_query.sql.j2")
         return template.render(
             inclusion_criteria=inclusion_criteria,
             exclusion_criteria=exclusion_criteria,
@@ -259,7 +261,8 @@ class CohortQueryBuilder:
                                     AND {e1_alias}.event_start_date < {e2_alias}.event_start_date
                                     {interval_sql}
                                     UNION ALL
-                                    SELECT {e2_alias}.person_id, {e2_alias}.event_start_date, {e2_alias}.event_end_date, 
+                                    SELECT {e2_alias}.person_id, {e2_alias}.event_start_date, 
+                                           {e2_alias}.event_end_date, 
                                            {e2_alias}.adjusted_start, {e2_alias}.adjusted_end
                                     FROM ({queries[1]}) AS {e2_alias}
                                     JOIN ({queries[0]}) AS {e1_alias}
