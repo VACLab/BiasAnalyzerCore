@@ -41,3 +41,7 @@ jobs:
     - name: Run tests
       run: |
         poetry run pytest -s --cov=biasanalyzer --cov-config=.coveragerc
+
+    # Step 6: Run Ruff check
+    - name: Run ruff
+      run: poetry run ruff check .
