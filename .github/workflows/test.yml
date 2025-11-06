@@ -1,4 +1,4 @@
-name: test
+name: Tests and Lint
 
 on:
   # Trigger workflow on pull requests to the main branch
@@ -11,7 +11,8 @@ on:
       - main
 
 jobs:
-  test:
+  tests:
+    name: Run Unit Tests
     runs-on: ubuntu-22.04
 
     steps:
@@ -23,12 +24,12 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.8.18"  # Use your project’s Python version
+        python-version: "3.12.4"  # Use your project’s Python version
 
     # Step 3: Install Poetry
     - name: Install Poetry
       run: |
-        curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.4 python3 -
+        curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.2.1 python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     # Step 4: Install dependencies
