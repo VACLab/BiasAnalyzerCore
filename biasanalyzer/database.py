@@ -1,3 +1,4 @@
+# ruff: noqa: S608
 import gc
 from datetime import datetime
 from typing import Optional

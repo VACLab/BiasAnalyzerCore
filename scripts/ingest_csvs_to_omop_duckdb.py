@@ -1,3 +1,5 @@
+# ruff: noqa: S608
+
 """
 This script ingests both clinical and vocabulary OMOP CSV exports into a single DckDB database for
 downstream use of the core BiasAnalyzer python library.

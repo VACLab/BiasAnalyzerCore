@@ -1,3 +1,4 @@
+# ruff: noqa: S608
 import importlib.resources
 import os
 import sys
