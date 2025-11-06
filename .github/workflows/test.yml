@@ -20,13 +20,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Step 2: Set up Python
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12.4"  # Use project’s Python version
-
-    # Step 3: Install Poetry
+      # Step 3: Install Poetry
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
@@ -40,16 +34,12 @@ jobs:
         which poetry
         poetry --version
 
-    - name: Cache Poetry dependencies
-      uses: actions/cache@v4
+      # Step 2: Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        path: |
-          ~/.cache/pypoetry
-          ~/.cache/pip
-          .venv
-        key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          poetry-${{ runner.os }}-
+        python-version: "3.12"  # Use project’s Python version
+        cache: "poetry"
 
     # Step 5: Install dependencies
     - name: Install dependencies
