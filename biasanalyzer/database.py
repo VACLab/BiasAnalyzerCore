@@ -41,6 +41,16 @@ class BiasDatabase:
             cls._instance._initialize(*args, **kwargs)  # Initialize only once
         return cls._instance
 
+    def _safe_attach(self, alias: str, url: str, type_clause: str = ""):
+        try:
+            self.conn.execute(f"DETACH DATABASE {alias}")
+        except (duckdb.BinderException, duckdb.CatalogException):
+            pass
+        if type_clause:
+            self.conn.execute(f"ATTACH '{url}' AS {alias} {type_clause}")
+        else:
+            self.conn.execute(f"ATTACH '{url}' AS {alias}")
+
     def _initialize(self, db_url, omop_db_url=None):
         # by default, duckdb uses in memory database
         self.conn = duckdb.connect(db_url)
@@ -52,18 +62,9 @@ class BiasDatabase:
             if omop_db_url.startswith("postgresql://"):
                 # omop db is postgreSQL
                 self.load_postgres_extension()
-                self.conn.execute(f"""            
-                            ATTACH '{self.omop_cdm_db_url}' as {self.omop_alias} (TYPE postgres)
-                            """)
+                self._safe_attach(self.omop_alias, self.omop_cdm_db_url, "(TYPE postgres)")
             elif omop_db_url.endswith(".duckdb"):
-                try:
-                    self.conn.execute(f"DETACH DATABASE {self.omop_alias}")
-                except (duckdb.BinderException, duckdb.CatalogException):
-                    # ignore if not attached yet
-                    pass
-                self.conn.execute(f"""
-                            ATTACH '{self.omop_cdm_db_url}' as {self.omop_alias}
-                            """)
+                self._safe_attach(self.omop_alias, self.omop_cdm_db_url)
             else:
                 raise ValueError("Unsupported OMOP database backend")
 
