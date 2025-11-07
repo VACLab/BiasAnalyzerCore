@@ -56,6 +56,11 @@ class BiasDatabase:
                             ATTACH '{self.omop_cdm_db_url}' as {self.omop_alias} (TYPE postgres)
                             """)
             elif omop_db_url.endswith(".duckdb"):
+                try:
+                    self.conn.execute(f"DETACH DATABASE {self.omop_alias}")
+                except (duckdb.BinderException, duckdb.CatalogException):
+                    # ignore if not attached yet
+                    pass
                 self.conn.execute(f"""
                             ATTACH '{self.omop_cdm_db_url}' as {self.omop_alias}
                             """)
