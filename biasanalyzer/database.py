@@ -1,5 +1,6 @@
 # ruff: noqa: S608
 import gc
+import sys
 from datetime import datetime
 from typing import Optional
 
@@ -8,7 +9,6 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
-import sys
 from tqdm.auto import tqdm
 
 from biasanalyzer.models import CohortDefinition
