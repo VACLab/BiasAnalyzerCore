@@ -1,5 +1,6 @@
 # ruff: noqa: S608
 import gc
+import platform
 from datetime import datetime
 from typing import Optional
 
@@ -46,10 +47,10 @@ class BiasDatabase:
             self.conn.execute(f"DETACH DATABASE {alias}")
         except (duckdb.BinderException, duckdb.CatalogException):
             pass
-        if type_clause:
+        if type_clause:  # attaching to postgreSQL OMOP DB
             self.conn.execute(f"ATTACH '{url}' AS {alias} {type_clause}")
-        else:
-            self.conn.execute(f"ATTACH '{url}' AS {alias}")
+        else:  # attaching to duckdb OMOP DB - adding READ_ONLY is critical to get it working on Windows
+            self.conn.execute(f"ATTACH '{url}' AS {alias} (READ_ONLY)")
 
     def _initialize(self, db_url, omop_db_url=None):
         # by default, duckdb uses in memory database
@@ -337,7 +338,11 @@ class OMOPCDMDatabase:
 
             # Handle DuckDB connection
             try:
-                self.engine = duckdb.connect(db_url)
+                if platform.system().lower() == "windows":  # pragma: no cover
+                    # it is critical to set duckdb connection to be read-only on windows platform
+                    self.engine = duckdb.connect(db_url, read_only=True)
+                else:
+                    self.engine = duckdb.connect(db_url)
                 notify_users(f"Connected to the DuckDB database: {db_url}.")
             except duckdb.Error as e:  # pragma: no cover
                 notify_users(f"Failed to connect to DuckDB: {e}", level="error")
