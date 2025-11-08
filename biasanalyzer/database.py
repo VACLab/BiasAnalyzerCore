@@ -1,6 +1,6 @@
 # ruff: noqa: S608
 import gc
-import sys
+import platform
 from datetime import datetime
 from typing import Optional
 
@@ -338,7 +338,7 @@ class OMOPCDMDatabase:
 
             # Handle DuckDB connection
             try:
-                if sys.platform.startswith("win"):  # pragma: no cover
+                if platform.system().lower() == "windows":  # pragma: no cover
                     # it is critical to set duckdb connection to be read-only on windows platform
                     self.engine = duckdb.connect(db_url, read_only=True)
                 else:
