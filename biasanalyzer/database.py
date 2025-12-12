@@ -99,7 +99,7 @@ class BiasDatabase:
     def _create_cohort_table(self):
         self.conn.execute(f"""
             CREATE TABLE IF NOT EXISTS {self.schema}.cohort (
-                subject_id BIGINT,
+                subject_id VARCHAR NOT NULL,
                 cohort_definition_id INTEGER,
                 cohort_start_date DATE,
                 cohort_end_date DATE,
@@ -288,12 +288,14 @@ class BiasDatabase:
             )
             concept_stats[concept_type] = self._execute_query(query)
             cs_df = pd.DataFrame(concept_stats[concept_type])
-            # Combine concept_name and prevalence into a "details" column
-            cs_df["details"] = cs_df.apply(
-                lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
-                f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})",
-                axis=1,
-            )
+
+            if not cs_df.empty:
+                # Combine concept_name and prevalence into a "details" column
+                cs_df["details"] = cs_df.apply(
+                    lambda row: f"{row['concept_name']} (Code: {row['concept_code']}, "
+                    f"Count: {row['count_in_cohort']}, Prevalence: {row['prevalence']:.3%})",
+                    axis=1,
+                )
 
             if print_concept_hierarchy:
                 filtered_cs_df = cs_df[cs_df["ancestor_concept_id"] != cs_df["descendant_concept_id"]]
