@@ -10,7 +10,7 @@ from biasanalyzer.cohort_query_builder import CohortQueryBuilder
 from biasanalyzer.concept import ConceptHierarchy
 from biasanalyzer.config import load_cohort_creation_config
 from biasanalyzer.database import BiasDatabase, OMOPCDMDatabase
-from biasanalyzer.models import CohortDefinition
+from biasanalyzer.models import CohortDefinition, DOMAIN_MAPPING
 from biasanalyzer.utils import clean_string, hellinger_distance, notify_users
 
 
@@ -59,6 +59,9 @@ class CohortData:
         """
         Get cohort concept statistics such as concept prevalence
         """
+        if concept_type not in DOMAIN_MAPPING:
+            raise ValueError(f'input concept_type {concept_type} is not a valid concept type to get concept stats')
+
         cohort_stats = self.bias_db.get_cohort_concept_stats(
             self.cohort_id,
             self.query_builder,
