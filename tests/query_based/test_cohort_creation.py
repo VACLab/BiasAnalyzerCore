@@ -86,10 +86,10 @@ def test_cohort_creation_baseline(caplog, test_db):
 
     patient_ids = set([item["subject_id"] for item in cohort.data])
     assert_equal(len(patient_ids), 5)
-    assert_equal(patient_ids, {106, 108, 110, 111, 112})
+    assert_equal(patient_ids, {'106', '108', '110', '111', '112'})
     # select two patients to check for cohort_start_date and cohort_end_date automatically computed
-    patient_106 = next(item for item in cohort.data if item["subject_id"] == 106)
-    patient_108 = next(item for item in cohort.data if item["subject_id"] == 108)
+    patient_106 = next(item for item in cohort.data if item["subject_id"] == '106')
+    patient_108 = next(item for item in cohort.data if item["subject_id"] == '108')
 
     # Replace dates with actual values from your test data
     assert_equal(
@@ -127,7 +127,7 @@ def test_cohort_creation_study(test_db):
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
     patient_ids = set([item["subject_id"] for item in cohort.data])
     assert_equal(len(patient_ids), 4)
-    assert_equal(patient_ids, {108, 110, 111, 112})
+    assert_equal(patient_ids, {'108', '110', '111', '112'})
 
 
 def test_cohort_creation_study2(caplog, test_db):
@@ -155,7 +155,7 @@ def test_cohort_creation_study2(caplog, test_db):
     assert cohort.data is not None, "Cohort creation wrongly returned None data"
     patient_ids = set([item["subject_id"] for item in cohort.data])
     assert_equal(len(patient_ids), 1)
-    assert_equal(patient_ids, {106})
+    assert_equal(patient_ids, {'106'})
 
 
 def test_cohort_creation_all(caplog, test_db):
@@ -191,7 +191,7 @@ def test_cohort_creation_all(caplog, test_db):
     patient_ids = set([item["subject_id"] for item in cohort.data])
     print(f"patient_ids: {patient_ids}", flush=True)
     assert_equal(len(patient_ids), 2)
-    assert_equal(patient_ids, {108, 110})
+    assert_equal(patient_ids, {'108', '110'})
 
 
 def test_cohort_creation_multiple_temporary_groups_with_no_operator(test_db):
@@ -214,7 +214,7 @@ def test_cohort_creation_multiple_temporary_groups_with_no_operator(test_db):
     patient_ids = set([item["subject_id"] for item in cohort.data])
     print(f"patient_ids: {patient_ids}", flush=True)
     assert_equal(len(patient_ids), 2)
-    assert_equal(patient_ids, {108, 110})
+    assert_equal(patient_ids, {'108', '110'})
 
 
 def test_cohort_creation_mixed_domains(test_db):
@@ -242,7 +242,7 @@ def test_cohort_creation_mixed_domains(test_db):
     patient_ids = set([item["subject_id"] for item in cohort.data])
     print(f"patient_ids: {patient_ids}", flush=True)
     assert_equal(len(patient_ids), 3)
-    assert_equal(patient_ids, {1, 2, 6})
+    assert_equal(patient_ids, {'1', '2', '6'})
     start_dates = [item["cohort_start_date"] for item in cohort.data]
     assert_equal(len(start_dates), 3)
     assert_equal(start_dates, [datetime.date(2020, 6, 1), datetime.date(2020, 6, 1), datetime.date(2018, 1, 1)])
@@ -356,10 +356,10 @@ def test_cohort_creation_negative_instance(test_db):
 
     patient_ids = set([item["subject_id"] for item in cohort.data])
     assert_equal(len(patient_ids), 6)  # Female patients 1, 2, 3, 5
-    assert_equal(patient_ids, {1, 2, 3, 5, 6, 7})
+    assert_equal(patient_ids, {'1', '2', '3', '5', '6', '7'})
 
     # Verify dates for a specific patient (e.g., patient 1 with last diabetes diagnosis)
-    patient_1 = next(item for item in cohort.data if item["subject_id"] == 1)
+    patient_1 = next(item for item in cohort.data if item["subject_id"] == '1')
     assert_equal(
         patient_1["cohort_start_date"],
         datetime.date(2020, 6, 1),
@@ -392,10 +392,10 @@ def test_cohort_creation_offset(test_db):
 
     patient_ids = set([item["subject_id"] for item in cohort.data])
     assert_equal(len(patient_ids), 6)  # Female patients 1, 2, 3, 5
-    assert_equal(patient_ids, {1, 2, 3, 5, 6, 7})
+    assert_equal(patient_ids, {'1', '2', '3', '5', '6', '7'})
 
     # Verify dates for a specific patient (e.g., patient 1 with offset)
-    patient_1 = next(item for item in cohort.data if item["subject_id"] == 1)
+    patient_1 = next(item for item in cohort.data if item["subject_id"] == '1')
     # Diabetes on 2020-06-01: -730 days = 2018-06-02, +180 days = 2020-11-28
     assert_equal(
         patient_1["cohort_start_date"],
@@ -435,10 +435,10 @@ def test_cohort_creation_negative_instance_offset(test_db):
 
     patient_ids = set([item["subject_id"] for item in cohort.data])
     assert_equal(len(patient_ids), 6)
-    assert_equal(patient_ids, {1, 2, 3, 5, 6, 7})
+    assert_equal(patient_ids, {'1', '2', '3', '5', '6', '7'})
 
     # Verify dates for a specific patient (e.g., patient 1 with last diabetes and offset)
-    patient_1 = next(item for item in cohort.data if item["subject_id"] == 1)
+    patient_1 = next(item for item in cohort.data if item["subject_id"] == '1')
     # Last diabetes on 2020-06-01: +180 days = 2020-11-28
     assert_equal(
         patient_1["cohort_start_date"],
