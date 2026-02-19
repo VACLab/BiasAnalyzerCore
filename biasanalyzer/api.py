@@ -40,7 +40,7 @@ class BIAS:
             except ValidationError as ex:
                 notify_users(f"configuration yaml file is not valid with validation error: {ex}", level="error")
 
-    def set_root_omop(self):
+    def set_root_omop(self, read_only=True):
         if not self.config:
             notify_users(
                 "no valid configuration to set root OMOP CDM data. "
@@ -62,7 +62,7 @@ class BIAS:
             self.bias_db = BiasDatabase(":memory:", omop_db_url=db_url)
         elif db_type == "duckdb":
             db_path = self.config["root_omop_cdm_database"].get("database", ":memory:")
-            self.omop_cdm_db = OMOPCDMDatabase(db_path)
+            self.omop_cdm_db = OMOPCDMDatabase(db_path, read_only=read_only)
             self.bias_db = BiasDatabase(":memory:", omop_db_url=db_path)
         else:
             notify_users(f"Unsupported database type: {db_type}")

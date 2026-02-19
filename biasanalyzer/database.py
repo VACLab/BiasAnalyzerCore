@@ -1,6 +1,5 @@
 # ruff: noqa: S608
 import gc
-import platform
 from datetime import datetime
 from typing import Optional
 
@@ -322,13 +321,13 @@ class OMOPCDMDatabase:
     _instance = None  # indicating a singleton with only one instance of the class ever created
     _database_type = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, db_url, read_only=True):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._initialize(*args, **kwargs)  # Initialize only once
+            cls._instance._initialize(db_url, read_only=read_only)  # Initialize only once
         return cls._instance
 
-    def _initialize(self, db_url):
+    def _initialize(self, db_url, read_only=True):
         if db_url.endswith(".duckdb"):
             # close any potential global connections if any
             for obj in gc.get_objects():  # pragma: no cover
@@ -340,11 +339,8 @@ class OMOPCDMDatabase:
 
             # Handle DuckDB connection
             try:
-                if platform.system().lower() == "windows":  # pragma: no cover
-                    # it is critical to set duckdb connection to be read-only on windows platform
-                    self.engine = duckdb.connect(db_url, read_only=True)
-                else:
-                    self.engine = duckdb.connect(db_url)
+                # it is critical to set duckdb connection to be read-only on windows and Mac platforms
+                self.engine = duckdb.connect(db_url, read_only=read_only)
                 notify_users(f"Connected to the DuckDB database: {db_url}.")
             except duckdb.Error as e:  # pragma: no cover
                 notify_users(f"Failed to connect to DuckDB: {e}", level="error")

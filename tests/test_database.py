@@ -168,8 +168,9 @@ def test_get_cohort_concept_stats_handles_exception(caplog):
     db = BiasDatabase(":memory:")
     db.omop_cdm_db_url = "duckdb"
     qry_builder = CohortQueryBuilder(cohort_creation=False)
+
     with pytest.raises(ValueError):
-        db.get_cohort_concept_stats(123, qry_builder)
+        db.get_cohort_concept_stats(123, qry_builder, concept_type="dummy")
 
 
 def test_get_cohort_attributes_handles_exception():

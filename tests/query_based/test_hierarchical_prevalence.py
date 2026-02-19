@@ -1,7 +1,6 @@
 import pytest
-from numpy.ma.testutils import assert_equal
-
 from biasanalyzer.concept import ConceptHierarchy
+from numpy.ma.testutils import assert_equal
 
 
 def test_cohort_concept_hierarchical_prevalence(test_db, caplog):
@@ -28,7 +27,7 @@ def test_cohort_concept_hierarchical_prevalence(test_db, caplog):
 
     # test the cohort does not have procedure_occurrence related concepts
     cohort_stat, _ = cohort.get_concept_stats(concept_type="procedure_occurrence")
-    assert_equal(cohort_stat, {'procedure_occurrence': []})
+    assert_equal(cohort_stat, {"procedure_occurrence": []})
 
     concept_stats, _ = cohort.get_concept_stats(vocab="ICD10CM", print_concept_hierarchy=True)
     assert concept_stats is not None, "Failed to fetch concept stats"
