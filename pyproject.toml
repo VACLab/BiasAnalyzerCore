@@ -10,9 +10,9 @@ include = [
     {path = "biasanalyzer/sql_templates/*.sql", format=["sdist", "wheel"]}
 ]
 [tool.poetry.dependencies]
-python = ">=3.8.10,<3.13"
+python = ">=3.9,<3.13"
 duckdb = "^1.1.1"
-pandas = "2.0.3"
+pandas = "^2.1.4"
 
 scipy = [
     {version = ">=1.10.1,<1.11", markers = "python_version<'3.12'"},
