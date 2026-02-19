@@ -11,13 +11,12 @@ Example for running this script:
 """
 
 import argparse
-import sys
 import csv
+import sys
 import time
 from pathlib import Path
 
 import duckdb
-
 
 FILENAME_STEM_TO_TABLE_NAME_MAPPING = {
     # 'demographics': 'person'
@@ -25,31 +24,17 @@ FILENAME_STEM_TO_TABLE_NAME_MAPPING = {
     # 'drugs': 'drug_exposure'
     # 'procedures': 'procedure_occurrence'
     # 'visits': 'visit_occurrence'
-    'observations': 'observation'
+    "observations": "observation"
 }
 
 COLUMN_MAPPINGS = {
-    "person": {
-        "deid_pat_id": "person_id"
-    },
-    "condition_occurrence": {
-        "deid_pat_id": "person_id"
-    },
-    "drug_exposure": {
-        "deid_pat_id": "person_id"
-    },
-    "procedure_occurrence": {
-        "deid_pat_id": "person_id"
-    },
-    "visit_occurrence": {
-        "deid_pat_id": "person_id"
-    },
-    "observation": {
-        "deid_pat_id": "person_id"
-    },
-    "measurement": {
-        "deid_pat_id": "person_id"
-    },
+    "person": {"deid_pat_id": "person_id"},
+    "condition_occurrence": {"deid_pat_id": "person_id"},
+    "drug_exposure": {"deid_pat_id": "person_id"},
+    "procedure_occurrence": {"deid_pat_id": "person_id"},
+    "visit_occurrence": {"deid_pat_id": "person_id"},
+    "observation": {"deid_pat_id": "person_id"},
+    "measurement": {"deid_pat_id": "person_id"},
 }
 
 OMOP_TABLE_SCHEMAS = {
@@ -71,7 +56,7 @@ OMOP_TABLE_SCHEMAS = {
         "race_source_value",
         "race_source_concept_id",
         "ethnicity_source_value",
-        "ethnicity_source_concept_id"
+        "ethnicity_source_concept_id",
     ],
     "condition_occurrence": [
         "condition_occurrence_id",
@@ -89,9 +74,9 @@ OMOP_TABLE_SCHEMAS = {
         "visit_detail_id",
         "condition_source_value",
         "condition_source_concept_id",
-        "condition_status_source_value"
+        "condition_status_source_value",
     ],
-    'drug_exposure': [
+    "drug_exposure": [
         "drug_exposure_id",
         "person_id",
         "drug_concept_id",
@@ -114,9 +99,9 @@ OMOP_TABLE_SCHEMAS = {
         "drug_source_value",
         "drug_source_concept_id",
         "route_source_value",
-        "dose_unit_source_value"
+        "dose_unit_source_value",
     ],
-    'procedure_occurrence': [
+    "procedure_occurrence": [
         "procedure_occurrence_id",
         "person_id",
         "procedure_concept_id",
@@ -132,9 +117,9 @@ OMOP_TABLE_SCHEMAS = {
         "visit_detail_id",
         "procedure_source_value",
         "procedure_source_concept_id",
-        "modifier_source_value"
+        "modifier_source_value",
     ],
-    'visit_occurrence': [
+    "visit_occurrence": [
         "visit_occurrence_id",
         "person_id",
         "visit_concept_id",
@@ -151,9 +136,9 @@ OMOP_TABLE_SCHEMAS = {
         "admitted_from_source_value",
         "discharged_to_concept_id",
         "discharged_to_source_value",
-        "preceding_visit_occurrence_id"
+        "preceding_visit_occurrence_id",
     ],
-    'observation': [
+    "observation": [
         "observation_id",
         "person_id",
         "observation_concept_id",
@@ -174,9 +159,10 @@ OMOP_TABLE_SCHEMAS = {
         "qualifier_source_value",
         "value_source_value",
         "observation_event_id",
-        "obs_event_field_concept_id"
-    ]
+        "obs_event_field_concept_id",
+    ],
 }
+
 
 def load_csv_to_duckdb(con, csv_path: Path, table_name: str):
     """Load a single CSV file into DuckDB."""
@@ -184,18 +170,18 @@ def load_csv_to_duckdb(con, csv_path: Path, table_name: str):
     print(f"loading {table_name} from {csv_path}")
 
     # read and normalize header
-    with open(csv_path, "r", newline="") as f:
+    with open(csv_path, newline="") as f:
         reader = csv.reader(f)
         raw_header = next(reader)
 
     # normalize: lower case + strip quotes/spaces
-    raw_header = [h.strip().replace('"', '') for h in raw_header]
+    raw_header = [h.strip().replace('"', "") for h in raw_header]
     header = [h.lower() for h in raw_header]
-    print(f'normalized header: {header}')
+    print(f"normalized header: {header}")
 
     mapping = COLUMN_MAPPINGS.get(table_name, {})
     final_cols = [mapping.get(col, col) for col in header]
-    print(f'mapped header: {final_cols}')
+    print(f"mapped header: {final_cols}")
 
     expected = OMOP_TABLE_SCHEMAS.get(table_name, [])
     final_set = set(final_cols)
@@ -209,7 +195,7 @@ def load_csv_to_duckdb(con, csv_path: Path, table_name: str):
     extra = final_set - set(expected)
     if extra:
         print(f"WARNING: Extra columns in CSV for {table_name}: {sorted(extra)}")
-        print(f"Extra columns will NOT be ingested.")
+        print("Extra columns will NOT be ingested.")
 
     select_clauses = []
     for orig, new in zip(raw_header, final_cols):
@@ -217,7 +203,7 @@ def load_csv_to_duckdb(con, csv_path: Path, table_name: str):
             # skip extra columns entirely
             continue
         if orig != new:
-            select_clauses.append(f'{orig} AS {new}')
+            select_clauses.append(f"{orig} AS {new}")
         else:
             select_clauses.append(orig)
 
@@ -268,9 +254,13 @@ def main():
         required=False,
         help="Directory containing OMOP vocabulary CSVs (concept, concept_relationship, etc.)",
     )
-    parser.add_argument("--output", type=Path,
-                        default=Path("Y:/OMOP_duckdb/omop.duckdb"),
-                        required=False, help="Output DuckDB file path")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("Y:/OMOP_duckdb/omop.duckdb"),
+        required=False,
+        help="Output DuckDB file path",
+    )
 
     args = parser.parse_args()
 

@@ -273,7 +273,7 @@ def test_db():
 
     # mock configuration file
     bias = BIAS(config_file_path=config_file)
-    bias.set_root_omop()
+    bias.set_root_omop(read_only=False)
 
     yield bias  # Provide the connection to the test
 
